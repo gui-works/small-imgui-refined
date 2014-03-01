@@ -24,7 +24,7 @@
 
 #include "imgui.h"
 
-#include "glew/glew.h"
+#include <GL/glew.h>
 #ifdef __APPLE__
 #include <OpenGL/gl2.h>
 #else

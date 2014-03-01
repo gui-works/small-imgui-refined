@@ -1,5 +1,5 @@
 // sample_gl3.cpp - public domain
-// authored from 2012-2013 by Adrien Herubel 
+// authored from 2012-2013 by Adrien Herubel
 
 
 #include <stdio.h>
@@ -9,13 +9,13 @@
 #include <cmath>
 #include <iostream>
 
-#include "glew/glew.h"
+#include <GL/glew.h>
 #ifdef __APPLE__
 #include <OpenGL/gl3.h>
 #else
 #include <GL/gl.h>
 #endif
-#include "GL/glfw.h"
+#include <GLFW/glfw3.h>
 
 #include "imgui.h"
 #include "imguiRenderGL3.h"
@@ -32,20 +32,23 @@ int main( int argc, char **argv )
     }
 
 #ifdef __APPLE__
-    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MAJOR, 3);
-    glfwOpenWindowHint(GLFW_OPENGL_VERSION_MINOR, 2);
+    glfwOpenWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwOpenWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwOpenWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #endif
     // Open a window and create its OpenGL context
-    if( !glfwOpenWindow( width, height, 0,0,0,0, 24,0, GLFW_WINDOW ) )
+    GLFWmonitor *monitor = 0; /* 0 for windowed, glfwGetPrimaryMonitor() for primary monitor, etc */
+    GLFWwindow *shared = 0;
+    GLFWwindow* window = glfwCreateWindow(width, height, "imgui sample imguiRenderGL3", monitor, shared);
+    if( !window )
     {
         fprintf( stderr, "Failed to open GLFW window\n" );
         glfwTerminate();
         exit( EXIT_FAILURE );
     }
 
-    glfwSetWindowTitle( "imgui sample imguiRenderGL3" );
+    glfwMakeContextCurrent(window);
 
 #ifdef __APPLE__
     glewExperimental = GL_TRUE;
@@ -59,7 +62,7 @@ int main( int argc, char **argv )
     }
 
     // Ensure we can capture the escape key being pressed below
-    glfwEnable( GLFW_STICKY_KEYS );
+    glfwSetInputMode( window, GLFW_STICKY_KEYS, GL_TRUE );
 
     // Enable vertical sync (on cards that support it)
     glfwSwapInterval( 1 );
@@ -88,9 +91,11 @@ int main( int argc, char **argv )
 
     // glfw scrolling
     int glfwscroll = 0;
-    do
+
+    // main loop
+    while (!glfwWindowShouldClose(window))
     {
-        glfwGetWindowSize(&width, &height);
+        glfwGetFramebufferSize(window, &width, &height);
         glViewport(0, 0, width, height);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -99,24 +104,24 @@ int main( int argc, char **argv )
 
         // Mouse states
         unsigned char mousebutton = 0;
-        int currentglfwscroll = glfwGetMouseWheel();
+        int currentglfwscroll = 0; //glfwGetMouseWheel();
         int mscroll = 0;
         if (currentglfwscroll < glfwscroll)
             mscroll = 2;
          if (currentglfwscroll > glfwscroll)
             mscroll = -2;
         glfwscroll = currentglfwscroll;
-        int mousex; int mousey;
-        glfwGetMousePos(&mousex, &mousey);
+        double mousex; double mousey;
+        glfwGetCursorPos(window, &mousex, &mousey);
         mousey = height - mousey;
-        int leftButton = glfwGetMouseButton( GLFW_MOUSE_BUTTON_LEFT );
-        int rightButton = glfwGetMouseButton( GLFW_MOUSE_BUTTON_RIGHT );
-        int middleButton = glfwGetMouseButton( GLFW_MOUSE_BUTTON_MIDDLE );
+        int leftButton = glfwGetMouseButton( window, GLFW_MOUSE_BUTTON_LEFT );
+        int rightButton = glfwGetMouseButton( window, GLFW_MOUSE_BUTTON_RIGHT );
+        int middleButton = glfwGetMouseButton( window, GLFW_MOUSE_BUTTON_MIDDLE );
         int toggle = 0;
         if( leftButton == GLFW_PRESS )
             mousebutton |= IMGUI_MBUT_LEFT;
-    
-        imguiBeginFrame(mousex, mousey, mousebutton, mscroll);
+
+        imguiBeginFrame(int(mousex), int(mousey), mousebutton, mscroll);
 
         imguiBeginScrollArea("Scroll area", 10, 10, width / 5, height - 20, &scrollarea1);
         imguiSeparatorLine();
@@ -175,31 +180,34 @@ int main( int argc, char **argv )
         imguiDrawRoundedRect(30 + width / 5 * 2, height - 240, 100, 100, 5.f, imguiRGBA(32,192, 32,192));
         imguiDrawRoundedRect(30 + width / 5 * 2, height - 350, 100, 100, 10.f, imguiRGBA(32, 32, 192, 192));
         imguiDrawRoundedRect(30 + width / 5 * 2, height - 470, 100, 100, 20.f, imguiRGBA(192, 32, 32,192));
-        
+
         imguiDrawRect(30 + width / 5 * 2, height - 590, 100, 100, imguiRGBA(32, 192, 32, 192));
         imguiDrawRect(30 + width / 5 * 2, height - 710, 100, 100, imguiRGBA(32, 32, 192, 192));
         imguiDrawRect(30 + width / 5 * 2, height - 830, 100, 100, imguiRGBA(192, 32, 32,192));
 
-        imguiRenderGLDraw(width, height); 
+        imguiRenderGLDraw(width, height);
 
         // Check for errors
         GLenum err = glGetError();
         if(err != GL_NO_ERROR)
         {
-            fprintf(stderr, "OpenGL Error : %s\n", gluErrorString(err));
+            fprintf(stderr, "OpenGL Error : %d %x\n", err, err);
         }
 
         // Swap buffers
-        glfwSwapBuffers();
+        glfwSwapBuffers(window);
+        glfwPollEvents();
 
-    } // Check if the ESC key was pressed or the window was closed
-    while( glfwGetKey( GLFW_KEY_ESC ) != GLFW_PRESS &&
-           glfwGetWindowParam( GLFW_OPENED ) );
+        // Check if the ESC key was pressed or the window was closed
+        if( glfwGetKey( window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
+            break;
+    }
 
     // Clean UI
     imguiRenderGLDestroy();
 
     // Close OpenGL window and terminate GLFW
+    glfwDestroyWindow(window);
     glfwTerminate();
 
     exit( EXIT_SUCCESS );

@@ -18,26 +18,20 @@ The only depedency is OpenGL. GLFW, GLEW are embeded with the samples.
 
 Linux : Tested on Arch Linux, Ubuntu 12.10, Debian Wheezy with various versions of gcc
 
-    premake4 gmake
-    make debug
-    make release
+    cmake . && make
     ./sample
 
 
 Mac OS X : Tested on 10.7 (Lion) with XCode 4.6. Only compatible with core profile contexts.
 
-    premake4 gmake
-    make debug
-    make release
+    cmake . && make
     ./sample
 
 Windows : Tested on Windows 7 with Visual Studio 2008 and 2010
 
-    premake4 vs2008 
-    Open .sln file
-
+    cmake . -G "NMake Makefiles" && nmake
 
 Usage
 ----------------------------
 
-Consult [sample.cpp](https://github.com/AdrienHerubel/imgui/blob/master/sample.cpp) for a detailed usage example. 
+Consult [sample.cpp](https://github.com/AdrienHerubel/imgui/blob/master/sample.cpp) for a detailed usage example.
