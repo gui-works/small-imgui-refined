@@ -34,10 +34,10 @@
 #   define snprintf _snprintf
 #endif
 
-#define theme_alpha(x) imguiRGBA( 255, 255, 255, (unsigned char)((x)*255.0/256.0) )
-#define black_alpha(x) imguiRGBA(   0,   0,   0, (unsigned char)((x)*255.0/256.0) )
-#define tone_alpha(x)  imguiRGBA( 255, 255, 255, (unsigned char)((x)*255.0/256.0) )
+#define white_alpha(x) imguiRGBA( 255, 255, 255, (unsigned char)((x)*255.0/256.0) )
 #define gray_alpha(x)  imguiRGBA( 128, 128, 128, (unsigned char)((x)*255.0/256.0) )
+#define black_alpha(x) imguiRGBA(   0,   0,   0, (unsigned char)((x)*255.0/256.0) )
+#define theme_alpha(x) imguiRGBA( 255, 196,  64, (unsigned char)((x)*255.0/256.0) )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -382,7 +382,7 @@ bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scr
         g_scrollId = (g_state.areaId<<16) | g_state.widgetId;
 
         g_state.widgetX = x + SCROLL_AREA_PADDING;
-        g_state.widgetY = y+h-AREA_HEADER + (*scroll);
+        g_state.widgetY = y+h-AREA_HEADER + (scroll ? *scroll : 0); // @rlyeh: support for fixed areas
         g_state.widgetW = w - SCROLL_AREA_PADDING*4;
         g_scrollTop = y-AREA_HEADER+h;
         g_scrollBottom = y+SCROLL_AREA_PADDING;
@@ -397,19 +397,27 @@ bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scr
         g_insideScrollArea = inRect(x, y, w, h, false);
         g_state.insideCurrentScroll = g_insideScrollArea;
 
-        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 6, imguiRGBA(0,0,0,192));
+        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 6, black_alpha(192) );
 
-        addGfxCmdText(x+AREA_HEADER/2, y+h-AREA_HEADER/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, name, imguiRGBA(255,255,255,128));
+        addGfxCmdText(x+AREA_HEADER/2, y+h-AREA_HEADER/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, name, white_alpha(128) );
 
-        addGfxCmdScissor(x+SCROLL_AREA_PADDING, y+SCROLL_AREA_PADDING, w-SCROLL_AREA_PADDING*4, h-AREA_HEADER-SCROLL_AREA_PADDING);
+        if( g_scrollVal ) { // @rlyeh: support for fixed areas
+              addGfxCmdScissor(
+              x < 0 ? 0 : x+SCROLL_AREA_PADDING, //@rlyeh: fix scissor clipping problem when scroll area is on left rect client
+              y+SCROLL_AREA_PADDING,
+              w-SCROLL_AREA_PADDING*4 + ( x < 0 ? x : 0 ),   // @rlyeh: small optimization; @todo: on the right as well
+              h > (AREA_HEADER + SCROLL_AREA_PADDING ) ? h - (AREA_HEADER + SCROLL_AREA_PADDING) : h ); // @rlyeh: fix when collapsing areas ( h <= AREA_HEADER )
+        }
 
         return g_insideScrollArea;
 }
 
 void imguiEndScrollArea()
 {
-        // Disable scissoring.
-        addGfxCmdScissor(-1,-1,-1,-1);
+        if( g_scrollVal ) { // @rlyeh: support for fixed areas
+            // Disable scissoring.
+            addGfxCmdScissor(-1,-1,-1,-1);
+        }
 
         // Draw scroll bar
         int x = g_scrollRight+SCROLL_AREA_PADDING/2;
@@ -423,7 +431,7 @@ void imguiEndScrollArea()
 
         float barHeight = (float)h/(float)sh;
 
-        if (barHeight < 1)
+        if (h > AREA_HEADER && barHeight < 1) // @rlyeh: fix when area size is too small
         {
                 float barY = (float)(y - sbot)/(float)sh;
                 if (barY < 0) barY = 0;
@@ -437,11 +445,11 @@ void imguiEndScrollArea()
                 int hh = (int)(barHeight*h);
 
                 const int range = h - (hh-1);
-                bool over = inRect(hx, hy, hw, hh);
+                bool over = inRect(hx, hy, hw, hh, true);
                 buttonLogic(hid, over);
+                float u = (float)(hy-y) / (float)range;
                 if (isActive(hid))
                 {
-                        float u = (float)(hy-y) / (float)range;
                         if (g_state.wentActive)
                         {
                                 g_state.dragY = g_state.my;
@@ -455,14 +463,15 @@ void imguiEndScrollArea()
                                 *g_scrollVal = (int)((1-u) * (sh - h));
                         }
                 }
+                else if(u<=0||u>1) *g_scrollVal = (int)(sh-h);  //rlyeh: @fix when resizing windows
 
                 // BG
-                addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)w/2-1, imguiRGBA(0,0,0,196));
+                addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)w/2-1, black_alpha(196) );
                 // Bar
                 if (isActive(hid))
-                        addGfxCmdRoundedRect((float)hx, (float)hy, (float)hw, (float)hh, (float)w/2-1, imguiRGBA(255,196,0,196));
+                        addGfxCmdRoundedRect((float)hx, (float)hy, (float)hw, (float)hh, (float)w/2-1, theme_alpha(196) );
                 else
-                        addGfxCmdRoundedRect((float)hx, (float)hy, (float)hw, (float)hh, (float)w/2-1, isHot(hid) ? imguiRGBA(255,196,0,96) : imguiRGBA(255,255,255,64));
+                        addGfxCmdRoundedRect((float)hx, (float)hy, (float)hw, (float)hh, (float)w/2-1, isHot(hid) ? theme_alpha(96) : theme_alpha(64) );
 
                 // Handle mouse scrolling.
                 if (g_insideScrollArea) // && !anyActive())
@@ -475,6 +484,7 @@ void imguiEndScrollArea()
                         }
                 }
         }
+        else *g_scrollVal = 0; // @rlyeh: fix for mismatching scroll when collapsing/uncollapsing content larger than container height
         g_state.insideCurrentScroll = false;
 }
 
@@ -489,14 +499,14 @@ bool imguiButton(const char* text, bool enabled)
         int h = BUTTON_HEIGHT;
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
 
-        bool over = enabled && inRect(x, y, w, h);
+        bool over = enabled && inRect(x, y, w, h, true);
         bool res = buttonLogic(id, over);
 
-        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, imguiRGBA(128,128,128, isActive(id)?196:96));
+        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, isActive(id) ? gray_alpha(196) : gray_alpha(96) );
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? imguiRGBA(255,196,0,255) : imguiRGBA(255,255,255,200));
+                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, imguiRGBA(128,128,128,200));
+                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(200) );
 
         return res;
 }
@@ -512,16 +522,16 @@ bool imguiItem(const char* text, bool enabled)
         int h = BUTTON_HEIGHT;
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
 
-        bool over = enabled && inRect(x, y, w, h);
+        bool over = enabled && inRect(x, y, w, h, true);
         bool res = buttonLogic(id, over);
 
         if (isHot(id))
-                addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 2.0f, imguiRGBA(255,196,0,isActive(id)?196:96));
+                addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 2.0f, isActive(id) ? theme_alpha(192) : theme_alpha(96) );
 
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, imguiRGBA(255,255,255,200));
+                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, theme_alpha(200) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, imguiRGBA(128,128,128,200));
+                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(200) );
 
         return res;
 }
@@ -537,24 +547,24 @@ bool imguiCheck(const char* text, bool checked, bool enabled)
         int h = BUTTON_HEIGHT;
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
 
-        bool over = enabled && inRect(x, y, w, h);
+        bool over = enabled && inRect(x, y, w, h, true);
         bool res = buttonLogic(id, over);
 
         const int cx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
         const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
-        addGfxCmdRoundedRect((float)cx-3, (float)cy-3, (float)CHECK_SIZE+6, (float)CHECK_SIZE+6, 4, imguiRGBA(128,128,128, isActive(id)?196:96));
+        addGfxCmdRoundedRect((float)cx-3, (float)cy-3, (float)CHECK_SIZE+6, (float)CHECK_SIZE+6, 4,  isActive(id) ? gray_alpha(196) : gray_alpha(96) );
         if (checked)
         {
                 if (enabled)
-                        addGfxCmdRoundedRect((float)cx, (float)cy, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, imguiRGBA(255,255,255,isActive(id)?255:200));
+                        addGfxCmdRoundedRect((float)cx, (float)cy, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, isActive(id) ? theme_alpha(256) : theme_alpha(200));
                 else
-                        addGfxCmdRoundedRect((float)cx, (float)cy, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, imguiRGBA(128,128,128,200));
+                        addGfxCmdRoundedRect((float)cx, (float)cy, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, gray_alpha(200) );
         }
 
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? imguiRGBA(255,196,0,255) : imguiRGBA(255,255,255,200));
+                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? theme_alpha(256) : theme_alpha(200) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, imguiRGBA(128,128,128,200));
+                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(200) );
 
         return res;
 }
@@ -573,21 +583,21 @@ bool imguiCollapse(const char* text, const char* subtext, bool checked, bool ena
         const int cx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
         const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
 
-        bool over = enabled && inRect(x, y, w, h);
+        bool over = enabled && inRect(x, y, w, h, true);
         bool res = buttonLogic(id, over);
 
         if (checked)
-                addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 2, imguiRGBA(255,255,255,isActive(id)?255:200));
+                addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 2, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
         else
-                addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 1, imguiRGBA(255,255,255,isActive(id)?255:200));
+                addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
 
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? imguiRGBA(255,196,0,255) : imguiRGBA(255,255,255,200));
+                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, imguiRGBA(128,128,128,200));
+                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
 
         if (subtext)
-                addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, subtext, imguiRGBA(255,255,255,128));
+                addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, subtext, theme_alpha(128));
 
         return res;
 }
@@ -597,7 +607,7 @@ void imguiLabel(const char* text)
         int x = g_state.widgetX;
         int y = g_state.widgetY - BUTTON_HEIGHT;
         g_state.widgetY -= BUTTON_HEIGHT;
-        addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, imguiRGBA(255,255,255,255));
+        addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, theme_alpha(256) );
 }
 
 void imguiValue(const char* text)
@@ -607,7 +617,7 @@ void imguiValue(const char* text)
         const int w = g_state.widgetW;
         g_state.widgetY -= BUTTON_HEIGHT;
 
-        addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, text, imguiRGBA(255,255,255,200));
+        addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, text, theme_alpha(192) );
 }
 
 bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, bool enabled)
@@ -621,7 +631,7 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         int h = SLIDER_HEIGHT;
         g_state.widgetY -= SLIDER_HEIGHT + DEFAULT_SPACING;
 
-        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, imguiRGBA(0,0,0,128));
+        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
 
         const int range = w - SLIDER_MARKER_WIDTH;
 
@@ -630,7 +640,7 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         if (u > 1) u = 1;
         int m = (int)(u * range);
 
-        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_HEIGHT);
+        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_HEIGHT, true);
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -654,26 +664,24 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         }
 
         if (isActive(id))
-                addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, imguiRGBA(255,255,255,255));
+                addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, theme_alpha(256) );
         else
-                addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, isHot(id) ? imguiRGBA(255,196,0,128) : imguiRGBA(255,255,255,64));
+                addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, isHot(id) ? theme_alpha(128) : theme_alpha(64) );
 
         // TODO: fix this, take a look at 'nicenum'.
-        int digits = (int)(ceilf(log10f(vinc)));
-        char fmt[16];
-        snprintf(fmt, 16, "%%.%df", digits >= 0 ? 0 : -digits);
+        int digits = (int)(std::ceilf(std::log10f(vinc)));
         char msg[128];
-        snprintf(msg, 128, fmt, *val);
+        sprintf(msg, "%.*f", digits >= 0 ? 0 : -digits, *val); // @rlyeh: cleaner impl
 
         if (enabled)
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? imguiRGBA(255,196,0,255) : imguiRGBA(255,255,255,200));
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, isHot(id) ? imguiRGBA(255,196,0,255) : imguiRGBA(255,255,255,200));
+                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
         }
         else
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, imguiRGBA(128,128,128,200));
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, imguiRGBA(128,128,128,200));
+                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
+                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, gray_alpha(192) );
         }
 
         return res || valChanged;
@@ -688,7 +696,7 @@ bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
     unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
     int x = g_state.widgetX;
     int y = g_state.widgetY - BUTTON_HEIGHT;
-    addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, imguiRGBA(255,255,255,255));
+    addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, white_alpha(255));
     unsigned int textLen = unsigned int(strlen(text)*6.5);
     //--
     //Handle keyboard input if any
@@ -709,8 +717,8 @@ bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
     int h = BUTTON_HEIGHT;
     bool over = inRect(x, y, w, h);
     res = textInputLogic(id, over);
-    addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, isInputable(id)?imguiRGBA(255,196,0,255):imguiRGBA(128,128,128,96));
-    addGfxCmdText(x+7, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, buffer, isInputable(id)?imguiRGBA(0, 0, 0, 255):imguiRGBA(255,255,255,255));
+    addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, isInputable(id) ? theme_alpha(256):gray_alpha(96));
+    addGfxCmdText(x+7, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, buffer, isInputable(id) ? black_alpha(256): white_alpha(256));
     //--
     g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
     return res;
@@ -742,7 +750,7 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
 
     if (enabled)
     {
-        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 2.0f, !isHot(id) ? gray_alpha(64) : (isActive(id) ? tone_alpha(192) : tone_alpha(choosing ? 64 : 96)) );
+        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 2.0f, !isHot(id) ? gray_alpha(64) : (isActive(id) ? theme_alpha(192) : theme_alpha(choosing ? 64 : 96)) );
 
         addGfxCmdTriangle((float)cx, (float)cy, CHECK_SIZE, CHECK_SIZE, choosing ? 2 : 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
 
@@ -811,7 +819,7 @@ bool imguiRadio(const char* text, size_t n_options, const char** options, int &c
     bool res = buttonLogic(id, over);
 
     if (enabled)
-            addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT, text, isHot(id) ? tone_alpha(256) : theme_alpha(192) );
+            addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
     else
             addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
 
