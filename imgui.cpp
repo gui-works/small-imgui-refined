@@ -1,5 +1,8 @@
 //
 // Copyright (c) 2009-2010 Mikko Mononen memon@inside.org
+// Copyright (c) 2011-2014 Mario 'rlyeh' Rodriguez
+// Copyright (c) 2013 Florian Deconinck
+// Copyright (c) 2013 Adrien Herubel
 //
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
@@ -16,17 +19,25 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //
 
-// Source altered and distributed from https://github.com/AdrienHerubel/imgui
+// Source altered and distributed from https://github.com/r-lyeh/imgui
 
 #include <stdio.h>
 #include <string.h>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include <cmath>
 #include "imgui.hpp"
 
 #ifdef _MSC_VER
-#       define snprintf _snprintf
+#   pragma warning(push)
+#   pragma warning(disable: 4996) // _CRT_SECURE_NO_WARNINGS
+#   define snprintf _snprintf
 #endif
+
+#define theme_alpha(x) imguiRGBA( 255, 255, 255, (unsigned char)((x)*255.0/256.0) )
+#define black_alpha(x) imguiRGBA(   0,   0,   0, (unsigned char)((x)*255.0/256.0) )
+#define tone_alpha(x)  imguiRGBA( 255, 255, 255, (unsigned char)((x)*255.0/256.0) )
+#define gray_alpha(x)  imguiRGBA( 128, 128, 128, (unsigned char)((x)*255.0/256.0) )
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -61,7 +72,7 @@ static void addGfxCmdScissor(int x, int y, int w, int h)
         imguiGfxCmd& cmd = g_gfxCmdQueue[g_gfxCmdQueueSize++];
         cmd.type = IMGUI_GFXCMD_SCISSOR;
         cmd.flags = x < 0 ? 0 : 1;      // on/off flag.
-        cmd.col = 0;
+        cmd.col = imguiRGBA(0,0,0,0);
         cmd.rect.x = (short)x;
         cmd.rect.y = (short)y;
         cmd.rect.w = (short)w;
@@ -137,7 +148,7 @@ static void addGfxCmdText(int x, int y, int align, const char* text, unsigned in
         cmd.col = color;
         cmd.text.x = (short)x;
         cmd.text.y = (short)y;
-        cmd.text.align = (short)align;
+        cmd.text.align = align;
         cmd.text.text = allocText(text);
 }
 
@@ -195,6 +206,11 @@ inline bool isInputable(unsigned int id)
 inline bool isHot(unsigned int id)
 {
         return g_state.hot == id;
+}
+
+inline bool anyHot()
+{
+    return g_state.hot != 0;
 }
 
 inline bool inRect(int x, int y, int w, int h, bool checkScroll = true)
@@ -700,6 +716,156 @@ bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
     return res;
 }
 
+void imguiPair(const char* text, const char *value)  // @rlyeh: new widget
+{
+    imguiLabel(text);
+    g_state.widgetY += BUTTON_HEIGHT;
+    imguiValue(value);
+}
+
+bool imguiList(const char* text, size_t n_options, const char** options, int &choosing, int &clicked, bool enabled) // @rlyeh: new widget
+{
+    g_state.widgetId++;
+    unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+    int x = g_state.widgetX;
+    int y = g_state.widgetY - BUTTON_HEIGHT;
+    int w = g_state.widgetW;
+    int h = BUTTON_HEIGHT;
+    g_state.widgetY -= BUTTON_HEIGHT; // + DEFAULT_SPACING;
+
+    const int cx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
+    const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
+
+    bool over = enabled && inRect(x, y, w, h, true);
+    bool res = buttonLogic(id, over);
+
+    if (enabled)
+    {
+        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 2.0f, !isHot(id) ? gray_alpha(64) : (isActive(id) ? tone_alpha(192) : tone_alpha(choosing ? 64 : 96)) );
+
+        addGfxCmdTriangle((float)cx, (float)cy, CHECK_SIZE, CHECK_SIZE, choosing ? 2 : 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
+
+        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, clicked < 0 ? text : options[clicked], theme_alpha(192) );
+
+        //addGfxCmdRoundedRect(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, isActive(id) ? theme_alpha(256) : theme_alpha(192));
+
+        if( res )
+            choosing ^= 1;
+    }
+    else
+    {
+        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 2.0f, gray_alpha(64) );
+
+        addGfxCmdTriangle((float)cx, (float)cy, CHECK_SIZE, CHECK_SIZE, choosing ? 2 : 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
+
+        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, clicked < 0 ? text : options[clicked], gray_alpha(192) );
+
+        //addGfxCmdRoundedRect(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, isActive(id) ? theme_alpha(256) : theme_alpha(192));
+    }
+
+    bool result = false;
+
+    if( choosing )
+    {
+        // choice selector
+        imguiIndent();
+            // hotness = are we on focus?
+            bool hotness = isHot(id) | isActive(id);
+            // choice selector list
+            for( size_t n = 0; !result && n < n_options; ++n )
+            {
+                // got answer?
+                if( imguiItem( options[n], enabled ) )
+                    clicked = n, choosing = 0, result = true;
+
+                unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+                // ensure that widget is still on focus while choosing
+                hotness |= isHot(id) | isActive(id);
+            }
+            // close on blur
+            if( !hotness && anyHot() )
+            {}//    choosing = 0;
+        imguiUnindent();
+    }
+
+    return result;
+}
+
+bool imguiRadio(const char* text, size_t n_options, const char** options, int &clicked, bool enabled) // @rlyeh: new widget
+{
+    g_state.widgetId++;
+    unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+    int x = g_state.widgetX;
+    int y = g_state.widgetY - BUTTON_HEIGHT;
+    int w = g_state.widgetW;
+    int h = BUTTON_HEIGHT;
+    g_state.widgetY -= BUTTON_HEIGHT; // + DEFAULT_SPACING;
+
+    const int cx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
+    const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
+
+    bool over = enabled && inRect(x, y, w, h, true);
+    bool res = buttonLogic(id, over);
+
+    if (enabled)
+            addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT, text, isHot(id) ? tone_alpha(256) : theme_alpha(192) );
+    else
+            addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
+
+    bool result = false;
+
+    imguiIndent();
+        for( size_t i = 0; i < n_options; ++i )
+        {
+            bool cl = ( clicked == i );
+            if( imguiCheck( options[i], cl, enabled ) )
+                clicked = i, result = true;
+        }
+    imguiUnindent();
+
+    return result;
+}
+
+void imguiProgressBar(const char* text, float val, bool show_decimals)
+{
+    const float vmin = 0.00f, vmax = 100.00f;
+
+    if( val < 0.f ) val = 0.f; else if( val > 100.f ) val = 100.f;
+
+    g_state.widgetId++;
+    unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+    int x = g_state.widgetX;
+    int y = g_state.widgetY - BUTTON_HEIGHT;
+    int w = g_state.widgetW;
+    int h = SLIDER_HEIGHT;
+    g_state.widgetY -= SLIDER_HEIGHT + DEFAULT_SPACING;
+
+    addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
+
+    const int range = w - SLIDER_MARKER_WIDTH;
+
+    float u = (val - vmin) / (vmax-vmin);
+    if (u < 0) u = 0;
+    if (u > 1) u = 1;
+    int m = (int)(u * range);
+
+    addGfxCmdRoundedRect((float)(x+0), (float)y, (float)(SLIDER_MARKER_WIDTH+m), (float)SLIDER_HEIGHT, 4.0f, theme_alpha(64) );
+
+    // TODO: fix this, take a look at 'nicenum'.
+    int digits = (int)(std::ceilf(std::log10f(0.01f)));
+    char msg[128];
+    if( show_decimals )
+    sprintf(msg, "%.*f%%", digits >= 0 ? 0 : -digits, val);
+    else
+    sprintf(msg, "%d%%", int(val) );
+
+    addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, theme_alpha(192) );
+    addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, theme_alpha(192) );
+}
 
 void imguiIndent()
 {
@@ -726,10 +892,36 @@ void imguiSeparatorLine()
         int h = 1;
         g_state.widgetY -= DEFAULT_SPACING*4;
 
-        addGfxCmdRect((float)x, (float)y, (float)w, (float)h, imguiRGBA(255,255,255,32));
+        addGfxCmdRect((float)x, (float)y, (float)w, (float)h, theme_alpha(32) );
 }
 
-void imguiDrawText(int x, int y, int align, const char* text, unsigned int color)
+// @todo: fixme, buggy
+void imguiTabulator()
+{
+    const int BUTTON_WIDTH = g_state.widgetW > g_state.widgetX ? g_state.widgetW - g_state.widgetX : g_state.widgetX - g_state.widgetW;
+
+    g_state.widgetX += BUTTON_WIDTH;
+    g_state.widgetW += BUTTON_WIDTH;
+
+    // should in fact get retrieved from last widget queued size
+    g_state.widgetY += BUTTON_HEIGHT;
+}
+
+// @todo: fixme, buggy
+void imguiTabulatorLine()
+{
+    int x = g_state.widgetX + DEFAULT_SPACING*2;
+    int y = g_state.widgetY;
+    int w = 1;
+    int h = 100; //g_state.widgetH;
+
+    g_state.widgetX += DEFAULT_SPACING*4;
+    g_state.widgetW += DEFAULT_SPACING*4;
+
+    addGfxCmdRect((float)x, (float)y, (float)w, (float)h, theme_alpha(32) );
+}
+
+void imguiDrawText(int x, int y, imguiTextAlign align, const char* text, unsigned int color)
 {
         addGfxCmdText(x, y, align, text, color);
 }
@@ -748,3 +940,7 @@ void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned 
 {
         addGfxCmdRoundedRect(x, y, w, h, r, color);
 }
+
+#ifdef _MSC_VER
+#   pragma warning(pop) // C4996
+#endif

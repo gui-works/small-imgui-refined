@@ -1,6 +1,8 @@
-
 //
 // Copyright (c) 2009-2010 Mikko Mononen memon@inside.org
+// Copyright (c) 2011-2014 Mario 'rlyeh' Rodriguez
+// Copyright (c) 2013 Florian Deconinck
+// Copyright (c) 2013 Adrien Herubel
 //
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
@@ -17,15 +19,15 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //
 
-// Source altered and distributed from https://github.com/AdrienHerubel/imgui
+// Source altered and distributed from https://github.com/r-lyeh/imgui
 
 #ifndef IMGUI_HPP
 #define IMGUI_HPP
 
 enum imguiMouseButton
 {
-        IMGUI_MBUT_LEFT = 0x01, 
-        IMGUI_MBUT_RIGHT = 0x02, 
+        IMGUI_MBUT_LEFT = 0x01,
+        IMGUI_MBUT_RIGHT = 0x02,
 };
 
 enum imguiTextAlign
@@ -43,24 +45,38 @@ inline unsigned int imguiRGBA(unsigned char r, unsigned char g, unsigned char b,
 void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll, char asciiCode=0);
 void imguiEndFrame();
 
-bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scroll);
+// masking
+
+bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scroll=0);
 void imguiEndScrollArea();
+
+// layout
 
 void imguiIndent();
 void imguiUnindent();
 void imguiSeparator();
 void imguiSeparatorLine();
+//void imguiTabulator();
+//void imguiTabulatorLine();
+
+// widgets
 
 bool imguiButton(const char* text, bool enabled = true);
-bool imguiItem(const char* text, bool enabled = true);
 bool imguiCheck(const char* text, bool checked, bool enabled = true);
 bool imguiCollapse(const char* text, const char* subtext, bool checked, bool enabled = true);
-void imguiLabel(const char* text);
-void imguiValue(const char* text);
+bool imguiItem(const char* text, bool enabled = true);
 bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, bool enabled = true);
 bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength);
+void imguiLabel(const char* text);
+void imguiValue(const char* text);
+bool imguiList(const char* text, size_t n_options, const char** options, int &choosing, int &clicked, bool enabled = true);
+bool imguiRadio(const char* text, size_t n_options, const char** options, int &clicked, bool enabled = true);
+void imguiPair(const char *text, const char *value);
+void imguiProgressBar(const char* text, float val, bool show_decimals = false);
 
-void imguiDrawText(int x, int y, int align, const char* text, unsigned int color);
+// rendering
+
+void imguiDrawText(int x, int y, imguiTextAlign align, const char* text, unsigned int color);
 void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int color);
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color);
 void imguiDrawRect(float x, float y, float w, float h, unsigned int color);

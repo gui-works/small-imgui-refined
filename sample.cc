@@ -41,7 +41,7 @@ void GetControlKEY(GLFWwindow *window, int glfw_key, int sys_scancode, int glfw_
 
 int main( int argc, char **argv )
 {
-    int width = 1024, height=768;
+    int width = 1024, height=640;
 
     // Initialise GLFW
     if( !glfwInit() )
@@ -121,6 +121,11 @@ $apple( $GL3(
     while( !glfwWindowShouldClose(window) )
     {
         glfwGetFramebufferSize(window, &width, &height);
+        if( width * height <= 1 ) {
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+            continue;
+        }
         glViewport(0, 0, width, height);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -197,6 +202,21 @@ $apple( $GL3(
         imguiLabel("Unindented");
 
         imguiTextInput("Text input", input, 15);
+
+        imguiPair( "hello", "pair" );
+        imguiProgressBar( "progress bar", 50 );
+
+        {
+            const char *list[] = {"hello", "world"};
+            static int choosing = 0, clicked = 0;
+            imguiList("hello", 2, list, choosing, clicked );
+        }
+
+        {
+            const char *list[] = {"hello", "world"};
+            static int clicked = 0;
+            imguiRadio("hello", 2, list, clicked );
+        }
 
         imguiEndScrollArea();
 

@@ -1,5 +1,7 @@
 //
 // Copyright (c) 2009-2010 Mikko Mononen memon@inside.org
+// Copyright (c) 2011-2014 Mario 'rlyeh' Rodriguez
+// Copyright (c) 2013 Adrien Herubel
 //
 // This software is provided 'as-is', without any express or implied
 // warranty.  In no event will the authors be held liable for any damages
@@ -16,8 +18,7 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //
 
-// Source altered and distributed from https://github.com/AdrienHerubel/imgui
-
+// Source altered and distributed from https://github.com/r-lyeh/imgui
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -32,8 +33,11 @@ static const float PI = 3.14159265f;
 void imguifree(void* ptr, void* userptr);
 void* imguimalloc(size_t size, void* userptr);
 
+#include <cmath>
 #define STBTT_malloc(x,y)    imguimalloc(x,y)
 #define STBTT_free(x,y)      imguifree(x,y)
+#define STBTT_ifloor(x)      ((int)std::floorf(x))
+#define STBTT_iceil(x)       ((int)std::ceilf(x))
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
