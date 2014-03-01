@@ -18,8 +18,37 @@
 
 // Source altered and distributed from https://github.com/AdrienHerubel/imgui
 
+
 #ifndef IMGUI_RENDER_GL_H
 #define IMGUI_RENDER_GL_H
+
+#ifndef $yes
+#define $yes(...) __VA_ARGS__
+#endif
+
+#ifndef $no
+#define $no(...)
+#endif
+
+#ifndef $GL2
+#define $GL2 $yes
+#endif
+
+#ifndef $GL3
+#define $GL3 $no
+#endif
+
+#include <GL/glew.h>
+
+#ifdef __APPLE__
+#   define $apple $yes
+#   define $aelse $no
+#   include $GL2(<OpenGL/gl.h>) $GL3(<OpenGL/gl3.h>)
+#else
+#   define $apple $no
+#   define $aelse $yes
+#   include <GL/gl.h>
+#endif
 
 bool imguiRenderGLInit(const char* fontpath);
 void imguiRenderGLDestroy();

@@ -16,20 +16,15 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //
 
-// Source altered and distributed from https://github.com/AdrienHerubel/imguir
+// Source altered and distributed from https://github.com/AdrienHerubel/imgui
+
 
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <stdio.h>
 
-#include "imgui.h"
-
-#include <GL/glew.h>
-#ifdef __APPLE__
-#include <OpenGL/gl2.h>
-#else
-#include <GL/gl.h>
-#endif
+#include "imgui.hpp"
+#include "imguiGL.hpp"
 
 // Some math headers don't have PI defined.
 static const float PI = 3.14159265f;
@@ -55,12 +50,25 @@ void* imguimalloc(size_t size, void* /*userptr*/)
 static const unsigned TEMP_COORD_COUNT = 100;
 static float g_tempCoords[TEMP_COORD_COUNT*2];
 static float g_tempNormals[TEMP_COORD_COUNT*2];
+$GL3(
+static float g_tempVertices[TEMP_COORD_COUNT * 12 + (TEMP_COORD_COUNT - 2) * 6];
+static float g_tempTextureCoords[TEMP_COORD_COUNT * 12 + (TEMP_COORD_COUNT - 2) * 6];
+static float g_tempColors[TEMP_COORD_COUNT * 24 + (TEMP_COORD_COUNT - 2) * 12];
+)
 
 static const int CIRCLE_VERTS = 8*4;
 static float g_circleVerts[CIRCLE_VERTS*2];
 
 static stbtt_bakedchar g_cdata[96]; // ASCII 32..126 is 95 glyphs
 static GLuint g_ftex = 0;
+$GL3(
+static GLuint g_whitetex = 0;
+static GLuint g_vao = 0;
+static GLuint g_vbos[3] = {0, 0, 0};
+static GLuint g_program = 0;
+static GLuint g_programViewportLocation = 0;
+static GLuint g_programTextureLocation = 0;
+)
 
 inline unsigned int RGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
 {
@@ -88,6 +96,10 @@ static void drawPolygon(const float* coords, unsigned numCoords, float r, unsign
 		g_tempNormals[j*2+1] = -dx;
 	}
 
+$GL3(
+	float colf[4] = { (float) (col&0xff) / 255.f, (float) ((col>>8)&0xff) / 255.f, (float) ((col>>16)&0xff) / 255.f, (float) ((col>>24)&0xff) / 255.f};
+	float colTransf[4] = { (float) (col&0xff) / 255.f, (float) ((col>>8)&0xff) / 255.f, (float) ((col>>16)&0xff) / 255.f, 0};
+)
 	for (unsigned i = 0, j = numCoords-1; i < numCoords; j=i++)
 	{
 		float dlx0 = g_tempNormals[j*2+0];
@@ -108,14 +120,80 @@ static void drawPolygon(const float* coords, unsigned numCoords, float r, unsign
 		g_tempCoords[i*2+1] = coords[i*2+1]+dmy*r;
 	}
 
+$GL3(
+	int vSize = numCoords * 12 + (numCoords - 2) * 6;
+	int uvSize = numCoords * 2 * 6 + (numCoords - 2) * 2 * 3;
+	int cSize = numCoords * 4 * 6 + (numCoords - 2) * 4 * 3;
+	float * v = g_tempVertices;
+	float * uv = g_tempTextureCoords;
+	memset(uv, 0, uvSize * sizeof(float));
+	float * c = g_tempColors;
+	memset(c, 1, cSize * sizeof(float));
+
+	float * ptrV = v;
+	float * ptrC = c;
+)
+$GL2(
 	unsigned int colTrans = RGBA(col&0xff, (col>>8)&0xff, (col>>16)&0xff, 0);
 
 	glBegin(GL_TRIANGLES);
 
 	glColor4ubv((GLubyte*)&col);
-
+)
 	for (unsigned i = 0, j = numCoords-1; i < numCoords; j=i++)
 	{
+$GL3(
+		*ptrV = coords[i*2];
+		*(ptrV+1) = coords[i*2 + 1];
+		ptrV += 2;
+		*ptrV = coords[j*2];
+		*(ptrV+1) = coords[j*2 + 1];
+		ptrV += 2;
+		*ptrV = g_tempCoords[j*2];
+		*(ptrV+1) = g_tempCoords[j*2 + 1];
+		ptrV += 2;
+		*ptrV = g_tempCoords[j*2];
+		*(ptrV+1) = g_tempCoords[j*2 + 1];
+		ptrV += 2;
+		*ptrV = g_tempCoords[i*2];
+		*(ptrV+1) = g_tempCoords[i*2 + 1];
+		ptrV += 2;
+		*ptrV = coords[i*2];
+		*(ptrV+1) = coords[i*2 + 1];
+		ptrV += 2;
+
+		*ptrC = colf[0];
+		*(ptrC+1) = colf[1];
+		*(ptrC+2) = colf[2];
+		*(ptrC+3) = colf[3];
+		ptrC += 4;
+		*ptrC = colf[0];
+		*(ptrC+1) = colf[1];
+		*(ptrC+2) = colf[2];
+		*(ptrC+3) = colf[3];
+		ptrC += 4;
+		*ptrC = colTransf[0];
+		*(ptrC+1) = colTransf[1];
+		*(ptrC+2) = colTransf[2];
+		*(ptrC+3) = colTransf[3];
+		ptrC += 4;
+		*ptrC = colTransf[0];
+		*(ptrC+1) = colTransf[1];
+		*(ptrC+2) = colTransf[2];
+		*(ptrC+3) = colTransf[3];
+		ptrC += 4;
+		*ptrC = colTransf[0];
+		*(ptrC+1) = colTransf[1];
+		*(ptrC+2) = colTransf[2];
+		*(ptrC+3) = colTransf[3];
+		ptrC += 4;
+		*ptrC = colf[0];
+		*(ptrC+1) = colf[1];
+		*(ptrC+2) = colf[2];
+		*(ptrC+3) = colf[3];
+		ptrC += 4;
+)
+$GL2(
 		glVertex2fv(&coords[i*2]);
 		glVertex2fv(&coords[j*2]);
 		glColor4ubv((GLubyte*)&colTrans);
@@ -126,17 +204,60 @@ static void drawPolygon(const float* coords, unsigned numCoords, float r, unsign
 
 		glColor4ubv((GLubyte*)&col);
 		glVertex2fv(&coords[i*2]);
+)
 	}
-
+$GL2(
 	glColor4ubv((GLubyte*)&col);
+)
 	for (unsigned i = 2; i < numCoords; ++i)
 	{
+$GL3(
+		*ptrV = coords[0];
+		*(ptrV+1) = coords[1];
+		ptrV += 2;
+		*ptrV = coords[(i-1)*2];
+		*(ptrV+1) = coords[(i-1)*2+1];
+		ptrV += 2;
+		*ptrV = coords[i*2];
+		*(ptrV+1) = coords[i*2 + 1];
+		ptrV += 2;
+
+		*ptrC = colf[0];
+		*(ptrC+1) = colf[1];
+		*(ptrC+2) = colf[2];
+		*(ptrC+3) = colf[3];
+		ptrC += 4;
+		*ptrC = colf[0];
+		*(ptrC+1) = colf[1];
+		*(ptrC+2) = colf[2];
+		*(ptrC+3) = colf[3];
+		ptrC += 4;
+		*ptrC = colf[0];
+		*(ptrC+1) = colf[1];
+		*(ptrC+2) = colf[2];
+		*(ptrC+3) = colf[3];
+		ptrC += 4;
+)
+$GL2(
 		glVertex2fv(&coords[0]);
 		glVertex2fv(&coords[(i-1)*2]);
 		glVertex2fv(&coords[i*2]);
+)
 	}
-
+$GL3(
+	glBindTexture(GL_TEXTURE_2D, g_whitetex);
+	glBindVertexArray(g_vao);
+	glBindBuffer(GL_ARRAY_BUFFER, g_vbos[0]);
+	glBufferData(GL_ARRAY_BUFFER, vSize*sizeof(float), v, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, g_vbos[1]);
+	glBufferData(GL_ARRAY_BUFFER, uvSize*sizeof(float), uv, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, g_vbos[2]);
+	glBufferData(GL_ARRAY_BUFFER, cSize*sizeof(float), c, GL_STATIC_DRAW);
+	glDrawArrays(GL_TRIANGLES, 0, (numCoords * 2 + numCoords - 2)*3);
+)
+$GL2(
 	glEnd();
+)
 }
 
 static void drawRect(float x, float y, float w, float h, float fth, unsigned int col)
@@ -282,10 +403,93 @@ bool imguiRenderGLInit(const char* fontpath)
 	// can free ttf_buffer at this point
 	glGenTextures(1, &g_ftex);
 	glBindTexture(GL_TEXTURE_2D, g_ftex);
+$GL3(
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512,512, 0, GL_RED, GL_UNSIGNED_BYTE, bmap);
+)
+$GL2(
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512,512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, bmap);
+)
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+$GL3(
+	// can free ttf_buffer at this point
+	unsigned char white_alpha = 255;
+	glGenTextures(1, &g_whitetex);
+	glBindTexture(GL_TEXTURE_2D, g_whitetex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 1, 1, 0, GL_RED, GL_UNSIGNED_BYTE, &white_alpha);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	glGenVertexArrays(1, &g_vao);
+	glGenBuffers(3, g_vbos);
+
+	glBindVertexArray(g_vao);
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+
+	glBindBuffer(GL_ARRAY_BUFFER, g_vbos[0]);
+	glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, g_vbos[1]);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*2, (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
+	glBindBuffer(GL_ARRAY_BUFFER, g_vbos[2]);
+	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(GL_FLOAT)*4, (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, 0, 0, GL_STATIC_DRAW);
+	g_program = glCreateProgram();
+
+	const char * vs =
+	"#version 150\n"
+	"uniform vec2 Viewport;\n"
+	"in vec2 VertexPosition;\n"
+	"in vec2 VertexTexCoord;\n"
+	"in vec4 VertexColor;\n"
+	"out vec2 texCoord;\n"
+	"out vec4 vertexColor;\n"
+	"void main(void)\n"
+	"{\n"
+	"    vertexColor = VertexColor;\n"
+	"    texCoord = VertexTexCoord;\n"
+	"    gl_Position = vec4(VertexPosition * 2.0 / Viewport - 1.0, 0.f, 1.0);\n"
+	"}\n";
+	GLuint vso = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vso, 1, (const char **)  &vs, NULL);
+	glCompileShader(vso);
+	glAttachShader(g_program, vso);
+
+	const char * fs =
+	"#version 150\n"
+	"in vec2 texCoord;\n"
+	"in vec4 vertexColor;\n"
+	"uniform sampler2D Texture;\n"
+	"out vec4  Color;\n"
+	"void main(void)\n"
+	"{\n"
+	"    float alpha = texture(Texture, texCoord).r;\n"
+	"    Color = vec4(vertexColor.rgb, vertexColor.a * alpha);\n"
+	"}\n";
+	GLuint fso = glCreateShader(GL_FRAGMENT_SHADER);
+
+	glShaderSource(fso, 1, (const char **) &fs, NULL);
+	glCompileShader(fso);
+	glAttachShader(g_program, fso);
+
+	glBindAttribLocation(g_program,  0,  "VertexPosition");
+	glBindAttribLocation(g_program,  1,  "VertexTexCoord");
+	glBindAttribLocation(g_program,  2,  "VertexColor");
+	glBindFragDataLocation(g_program, 0, "Color");
+	glLinkProgram(g_program);
+	glDeleteShader(vso);
+	glDeleteShader(fso);
+
+	glUseProgram(g_program);
+	g_programViewportLocation = glGetUniformLocation(g_program, "Viewport");
+	g_programTextureLocation = glGetUniformLocation(g_program, "Texture");
+
+	glUseProgram(0);
+)
 	free(ttfBuffer);
 	free(bmap);
 
@@ -299,6 +503,20 @@ void imguiRenderGLDestroy()
 		glDeleteTextures(1, &g_ftex);
 		g_ftex = 0;
 	}
+$GL3(
+	if (g_vao)
+	{
+		glDeleteVertexArrays(1, &g_vao);
+		glDeleteBuffers(3, g_vbos);
+		g_vao = 0;
+	}
+
+	if (g_program)
+	{
+		glDeleteProgram(g_program);
+		g_program = 0;
+	}
+)
 }
 
 static void getBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_index,
@@ -362,16 +580,22 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
 		x -= getTextLength(g_cdata, text)/2;
 	else if (align == IMGUI_ALIGN_RIGHT)
 		x -= getTextLength(g_cdata, text);
-
+$GL3(
+	float r = (float) (col&0xff) / 255.f;
+	float g = (float) ((col>>8)&0xff) / 255.f;
+	float b = (float) ((col>>16)&0xff) / 255.f;
+	float a = (float) ((col>>24)&0xff) / 255.f;
+)
+$GL2(
 	glColor4ub(col&0xff, (col>>8)&0xff, (col>>16)&0xff, (col>>24)&0xff);
 
 	glEnable(GL_TEXTURE_2D);
-
+)
 	// assume orthographic projection with units = screen pixels, origin at top left
 	glBindTexture(GL_TEXTURE_2D, g_ftex);
-
+$GL2(
 	glBegin(GL_TRIANGLES);
-
+)
 	const float ox = x;
 
 	while (*text)
@@ -392,7 +616,41 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
 		{
 			stbtt_aligned_quad q;
 			getBakedQuad(g_cdata, 512,512, c-32, &x,&y,&q);
-
+$GL3(
+			float v[12] = {
+				q.x0, q.y0,
+				q.x1, q.y1,
+				q.x1, q.y0,
+				q.x0, q.y0,
+				q.x0, q.y1,
+				q.x1, q.y1,
+			  };
+			float uv[12] = {
+				q.s0, q.t0,
+				q.s1, q.t1,
+				q.s1, q.t0,
+				q.s0, q.t0,
+				q.s0, q.t1,
+				q.s1, q.t1,
+			  };
+			float c[24] = {
+				r, g, b, a,
+				r, g, b, a,
+				r, g, b, a,
+				r, g, b, a,
+				r, g, b, a,
+				r, g, b, a,
+			  };
+			glBindVertexArray(g_vao);
+			glBindBuffer(GL_ARRAY_BUFFER, g_vbos[0]);
+			glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), v, GL_STATIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, g_vbos[1]);
+			glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), uv, GL_STATIC_DRAW);
+			glBindBuffer(GL_ARRAY_BUFFER, g_vbos[2]);
+			glBufferData(GL_ARRAY_BUFFER, 24*sizeof(float), c, GL_STATIC_DRAW);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+)
+$GL2(
 			glTexCoord2f(q.s0, q.t0);
 			glVertex2f(q.x0, q.y0);
 			glTexCoord2f(q.s1, q.t1);
@@ -406,12 +664,14 @@ static void drawText(float x, float y, const char *text, int align, unsigned int
 			glVertex2f(q.x0, q.y1);
 			glTexCoord2f(q.s1, q.t1);
 			glVertex2f(q.x1, q.y1);
+)
 		}
 		++text;
 	}
-
+$GL2(
 	glEnd();
 	glDisable(GL_TEXTURE_2D);
+)
 }
 
 void imguiRenderGLDraw(int width, int height)
@@ -420,6 +680,13 @@ void imguiRenderGLDraw(int width, int height)
 	int nq = imguiGetRenderQueueSize();
 
 	const float s = 1.0f/8.0f;
+$GL3(
+	glViewport(0, 0, width, height);
+	glUseProgram(g_program);
+	glActiveTexture(GL_TEXTURE0);
+	glUniform2f(g_programViewportLocation, (float) width, (float) height);
+	glUniform1i(g_programTextureLocation, 0);
+)
 
 	glDisable(GL_SCISSOR_TEST);
 	for (int i = 0; i < nq; ++i)

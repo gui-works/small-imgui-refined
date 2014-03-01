@@ -23,31 +23,21 @@ include_directories(deps/glew/include)
 include_directories(deps/glfw/include)
 
 add_executable(
-    sample2
-    sample_gl2.cpp
+    sample
+    sample.cc
     imgui.cpp
-    imguiRenderGL2.cpp
-    deps/glew/src/glew.c
-)
-add_executable(
-    sample3
-    sample_gl3.cpp
-    imgui.cpp
-    imguiRenderGL3.cpp
+    imguiGL.cpp
     deps/glew/src/glew.c
 )
 
 if(APPLE)
-    target_link_libraries(sample2 glfw ${GLFW_LIBRARIES})
-    target_link_libraries(sample3 glfw ${GLFW_LIBRARIES})
+    target_link_libraries(sample glfw ${GLFW_LIBRARIES})
 endif()
 
 if(UNIX)
-    target_link_libraries(sample2 dl glfw ${GLFW_LIBRARIES})
-    target_link_libraries(sample3 dl glfw ${GLFW_LIBRARIES})
+    target_link_libraries(sample dl glfw ${GLFW_LIBRARIES})
 endif()
 
 if(WIN32)
-    target_link_libraries(sample2 ws2_32.lib glfw ${GLFW_LIBRARIES})
-    target_link_libraries(sample3 ws2_32.lib glfw ${GLFW_LIBRARIES})
+    target_link_libraries(sample ws2_32.lib glfw ${GLFW_LIBRARIES})
 endif()

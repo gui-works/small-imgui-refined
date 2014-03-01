@@ -1,4 +1,4 @@
-// sample_gl2.cpp - public domain
+// sample.cc - public domain
 // authored from 2012-2013 by Adrien Herubel
 
 
@@ -9,16 +9,10 @@
 #include <cmath>
 #include <iostream>
 
-#include <GL/glew.h>
-#ifdef __APPLE__
-#include <OpenGL/gl.h>
-#else
-#include <GL/gl.h>
-#endif
-#include <GLFW/glfw3.h>
+#include "imgui.hpp"
+#include "imguiGL.hpp"
 
-#include "imgui.h"
-#include "imguiRenderGL2.h"
+#include <GLFW/glfw3.h>
 
 int main( int argc, char **argv )
 {
@@ -31,10 +25,16 @@ int main( int argc, char **argv )
         exit( EXIT_FAILURE );
     }
 
-    // Open a windowed window and create its OpenGL context
+    // Open a window and create its OpenGL context
+$apple( $GL3(
+    glfwOpenWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwOpenWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwOpenWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+) )
     GLFWmonitor *monitor = 0; /* 0 for windowed, glfwGetPrimaryMonitor() for primary monitor, etc */
     GLFWwindow *shared = 0;
-    GLFWwindow* window = glfwCreateWindow(width, height, "imgui sample imguiRenderGL2", monitor, shared);
+    GLFWwindow* window = glfwCreateWindow(width, height, "imgui sample", monitor, shared);
     if( !window )
     {
         fprintf( stderr, "Failed to open GLFW window\n" );
@@ -44,6 +44,9 @@ int main( int argc, char **argv )
 
     glfwMakeContextCurrent(window);
 
+$apple( $GL3(
+    glewExperimental = GL_TRUE;
+) )
     GLenum err = glewInit();
     if (GLEW_OK != err)
     {
@@ -91,6 +94,8 @@ int main( int argc, char **argv )
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        // Draw UI
+
         // Mouse states
         unsigned char mousebutton = 0;
         int currentglfwscroll = 0; //glfwGetMouseWheel();
@@ -110,6 +115,7 @@ int main( int argc, char **argv )
         if( leftButton == GLFW_PRESS )
             mousebutton |= IMGUI_MBUT_LEFT;
 
+$GL2(
         // Draw UI
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
@@ -121,6 +127,7 @@ int main( int argc, char **argv )
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         glUseProgram(0);
+)
 
 
         imguiBeginFrame(int(mousex), int(mousey), mousebutton, mscroll);
