@@ -19,8 +19,8 @@
 
 // Source altered and distributed from https://github.com/AdrienHerubel/imgui
 
-#ifndef IMGUI_H
-#define IMGUI_H
+#ifndef IMGUI_HPP
+#define IMGUI_HPP
 
 enum imguiMouseButton
 {
@@ -40,7 +40,7 @@ inline unsigned int imguiRGBA(unsigned char r, unsigned char g, unsigned char b,
         return (r) | (g << 8) | (b << 16) | (a << 24);
 }
 
-void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll);
+void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll, char asciiCode=0);
 void imguiEndFrame();
 
 bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scroll);
@@ -58,6 +58,7 @@ bool imguiCollapse(const char* text, const char* subtext, bool checked, bool ena
 void imguiLabel(const char* text);
 void imguiValue(const char* text);
 bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, bool enabled = true);
+bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength);
 
 void imguiDrawText(int x, int y, int align, const char* text, unsigned int color);
 void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int color);
@@ -108,4 +109,4 @@ const imguiGfxCmd* imguiGetRenderQueue();
 int imguiGetRenderQueueSize();
 
 
-#endif // IMGUI_H
+#endif // IMGUI_HPP

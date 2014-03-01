@@ -19,8 +19,8 @@
 // Source altered and distributed from https://github.com/AdrienHerubel/imgui
 
 
-#ifndef IMGUI_RENDER_GL_H
-#define IMGUI_RENDER_GL_H
+#ifndef IMGUIGL_HPP
+#define IMGUIGL_HPP
 
 #ifndef $yes
 #define $yes(...) __VA_ARGS__
@@ -54,4 +54,4 @@ bool imguiRenderGLInit(const char* fontpath);
 void imguiRenderGLDestroy();
 void imguiRenderGLDraw(int width, int height);
 
-#endif // IMGUI_RENDER_GL_H
+#endif // IMGUIGL_HPP

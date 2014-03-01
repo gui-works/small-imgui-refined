@@ -4,7 +4,11 @@ A small multiplatform immediate mode graphical user interface with OpenGL3.2 bac
 
 About
 -------------------------
-Most of the code is pulled from the recast library : http://code.google.com/p/recastnavigation/
+Most of the code is pulled from: https://github.com/AdrienHerubel/imgui
+
+Which is pulled from the recast library: http://code.google.com/p/recastnavigation/
+
+With partial merges from: https://github.com/FlorianDeconinck/imgui/
 
 TrueType loading and rendering is done using stb_truetype : http://nothings.org/stb/stb_truetype.h
 
@@ -34,4 +38,4 @@ Windows : Tested on Windows 7 with Visual Studio 2008 and 2010
 Usage
 ----------------------------
 
-Consult [sample.cpp](https://github.com/AdrienHerubel/imgui/blob/master/sample.cpp) for a detailed usage example.
+Check [sample.cc](sample.cc) for a detailed usage example.

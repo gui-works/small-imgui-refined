@@ -14,6 +14,31 @@
 
 #include <GLFW/glfw3.h>
 
+unsigned int KeyUNICODE=0;
+
+void GetUNICODE(GLFWwindow *window, unsigned int unicode ){
+    KeyUNICODE = unicode;
+}
+
+void GetControlKEY(GLFWwindow *window, int glfw_key, int sys_scancode, int glfw_action, int glfw_mods){
+    if(glfw_action == GLFW_PRESS)
+    {
+        switch (glfw_key)
+        {
+        case GLFW_KEY_BACKSPACE:
+            KeyUNICODE=0x08;
+            break;
+        case GLFW_KEY_ENTER:
+            KeyUNICODE=0x0D;
+            break;
+        default:
+            break;
+        }
+    }
+    if(glfw_action == GLFW_RELEASE)
+        KeyUNICODE = 0;
+}
+
 int main( int argc, char **argv )
 {
     int width = 1024, height=768;
@@ -86,6 +111,12 @@ $apple( $GL3(
     // glfw scrolling
     int glfwscroll = 0;
 
+    //glfw callback
+    glfwSetCharCallback(window, GetUNICODE);
+    glfwSetKeyCallback(window, GetControlKEY);
+    char input[15];
+    sprintf(input, "type here");
+
     // main loop
     while( !glfwWindowShouldClose(window) )
     {
@@ -115,7 +146,6 @@ $apple( $GL3(
         if( leftButton == GLFW_PRESS )
             mousebutton |= IMGUI_MBUT_LEFT;
 
-$GL2(
         // Draw UI
         glMatrixMode(GL_PROJECTION);
         glLoadIdentity();
@@ -127,10 +157,9 @@ $GL2(
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         glUseProgram(0);
-)
 
 
-        imguiBeginFrame(int(mousex), int(mousey), mousebutton, mscroll);
+        imguiBeginFrame(int(mousex), int(mousey), mousebutton, mscroll, KeyUNICODE);
 
         imguiBeginScrollArea("Scroll area", 10, 10, width / 5, height - 20, &scrollarea1);
         imguiSeparatorLine();
@@ -166,6 +195,8 @@ $GL2(
         imguiLabel("Indented");
         imguiUnindent();
         imguiLabel("Unindented");
+
+        imguiTextInput("Text input", input, 15);
 
         imguiEndScrollArea();
 

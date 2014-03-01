@@ -39,15 +39,17 @@ void* imguimalloc(size_t size, void* userptr);
 
 void imguifree(void* ptr, void* /*userptr*/)
 {
-	free(ptr);
+	delete [] ptr;
 }
 
 void* imguimalloc(size_t size, void* /*userptr*/)
 {
-	return malloc(size);
+	return new char [size];
 }
 
-static const unsigned TEMP_COORD_COUNT = 100;
+enum { TEMP_COORD_COUNT = 100 };
+enum { CIRCLE_VERTS = 8*4 };
+
 static float g_tempCoords[TEMP_COORD_COUNT*2];
 static float g_tempNormals[TEMP_COORD_COUNT*2];
 $GL3(
@@ -56,7 +58,6 @@ static float g_tempTextureCoords[TEMP_COORD_COUNT * 12 + (TEMP_COORD_COUNT - 2) 
 static float g_tempColors[TEMP_COORD_COUNT * 24 + (TEMP_COORD_COUNT - 2) * 12];
 )
 
-static const int CIRCLE_VERTS = 8*4;
 static float g_circleVerts[CIRCLE_VERTS*2];
 
 static stbtt_bakedchar g_cdata[96]; // ASCII 32..126 is 95 glyphs
