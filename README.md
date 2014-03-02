@@ -13,13 +13,14 @@ Features
 About
 -----
 
-- Most of the code is pulled from: https://github.com/AdrienHerubel/imgui
-- Which is pulled from the recast library: http://code.google.com/p/recastnavigation/
+- Most of the code is pulled from: http://code.google.com/p/recastnavigation/
+- With upgraded OpenGL backends from: https://github.com/AdrienHerubel/imgui
 - With partial merges from: https://github.com/FlorianDeconinck/imgui/
-- TrueType loading and rendering is done using stb_truetype: http://nothings.org/stb/stb_truetype.h
-
+- With TrueType font handling from: http://nothings.org/stb/stb_truetype.h
 
 The OpenGL backend was ported from OpenGL immediate mode to OpenGL 3.2 mainly to be compatible with Mac OS X core profile.
+
+This fork features cmake, smaller code base, cleanups and a few new widgets: pair, radio, list, progress bar, range.
 
 ![image](https://raw.github.com/r-lyeh/depot/master/imgui.png)
 
@@ -43,6 +44,7 @@ cmake . && make
 - Windows (Tested on Windows 7 with Visual Studio 2008, 2010 and 2013)
 ```
 cmake . -G "NMake Makefiles" && nmake
+sample
 ```
 
 Usage
