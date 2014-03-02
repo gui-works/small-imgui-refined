@@ -52,8 +52,12 @@
 #   include <GL/gl.h>
 #endif
 
-bool imguiRenderGLInit(const char* fontpath);
-void imguiRenderGLDestroy();
-void imguiRenderGLDraw(int width, int height);
+ bool imguiRenderGLInit();
+ void imguiRenderGLDestroy();
+ void imguiRenderGLDraw(int width, int height);
+
+ bool imguiRenderGLFontInit(int font, float pt, const void *data, unsigned size);
+ bool imguiRenderGLFontInit(int font, float pt, const char* fontpath);
+float imguiRenderGLFontGetWidth(const char* fstring);
 
 #endif // IMGUIGL_HPP

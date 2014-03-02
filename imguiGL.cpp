@@ -33,6 +33,22 @@ static const float PI = 3.14159265f;
 void imguifree(void* ptr, void* userptr);
 void* imguimalloc(size_t size, void* userptr);
 
+#if 1
+#include <stdio.h>                  // malloc, free, fopen, fclose, ftell, fseek, fread
+#include <string.h>                 // memset
+#define FONTSTASH_IMPLEMENTATION    // Expands implementation
+#include "fontstash.h"
+//#include <GLFW/glfw3.h>             // Or any other GL header of your choice.
+#define GLFONTSTASH_IMPLEMENTATION  // Expands implementation
+#include "fontstashGL.h"
+// Create GL stash for 512x512 texture, our coordinate system has zero at top-left.
+struct FONScontext* fs;
+// Add font to stash.
+struct font_style {
+	int face;
+	float size;
+} fonts[8];
+#else
 #include <cmath>
 #define STBTT_malloc(x,y)    imguimalloc(x,y)
 #define STBTT_free(x,y)      imguifree(x,y)
@@ -40,6 +56,8 @@ void* imguimalloc(size_t size, void* userptr);
 #define STBTT_iceil(x)       ((int)std::ceilf(x))
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
+static stbtt_bakedchar g_cdata[96]; // ASCII 32..126 is 95 glyphs
+#endif
 
 void imguifree(void* ptr, void* /*userptr*/)
 {
@@ -50,6 +68,7 @@ void* imguimalloc(size_t size, void* /*userptr*/)
 {
 	return new char [size];
 }
+
 
 enum { TEMP_COORD_COUNT = 100 };
 enum { CIRCLE_VERTS = 8*4 };
@@ -64,7 +83,6 @@ static float g_tempColors[TEMP_COORD_COUNT * 24 + (TEMP_COORD_COUNT - 2) * 12];
 
 static float g_circleVerts[CIRCLE_VERTS*2];
 
-static stbtt_bakedchar g_cdata[96]; // ASCII 32..126 is 95 glyphs
 static GLuint g_ftex = 0;
 $GL3(
 static GLuint g_whitetex = 0;
@@ -369,7 +387,7 @@ static void drawLine(float x0, float y0, float x1, float y1, float r, float fth,
 }
 
 
-bool imguiRenderGLInit(const char* fontpath)
+bool imguiRenderGLInit()
 {
 	for (int i = 0; i < CIRCLE_VERTS; ++i)
 	{
@@ -378,47 +396,10 @@ bool imguiRenderGLInit(const char* fontpath)
 		g_circleVerts[i*2+1] = sinf(a);
 	}
 
-	// Load font.
-	FILE* fp = fopen(fontpath, "rb");
-	if (!fp) return false;
-	fseek(fp, 0, SEEK_END);
-	int size = ftell(fp);
-	fseek(fp, 0, SEEK_SET);
-
-	unsigned char* ttfBuffer = (unsigned char*)malloc(size);
-	if (!ttfBuffer)
-	{
-		fclose(fp);
-		return false;
-	}
-
-	fread(ttfBuffer, 1, size, fp);
-	fclose(fp);
-	fp = 0;
-
-	unsigned char* bmap = (unsigned char*)malloc(512*512);
-	if (!bmap)
-	{
-		free(ttfBuffer);
-		return false;
-	}
-
-	stbtt_BakeFontBitmap(ttfBuffer,0, 15.0f, bmap,512,512, 32,96, g_cdata);
-
-	// can free ttf_buffer at this point
-	glGenTextures(1, &g_ftex);
-	glBindTexture(GL_TEXTURE_2D, g_ftex);
-$GL3(
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, 512,512, 0, GL_RED, GL_UNSIGNED_BYTE, bmap);
-)
-$GL2(
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512,512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, bmap);
-)
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// Create GL stash for 512x512 texture, our coordinate system has zero at top-left.
+	fs = glfonsCreate(512, 512, FONS_ZERO_BOTTOMLEFT);
 
 $GL3(
-	// can free ttf_buffer at this point
 	unsigned char white_alpha = 255;
 	glGenTextures(1, &g_whitetex);
 	glBindTexture(GL_TEXTURE_2D, g_whitetex);
@@ -495,8 +476,46 @@ $GL3(
 
 	glUseProgram(0);
 )
-	free(ttfBuffer);
-	free(bmap);
+
+	return true;
+}
+
+bool imguiRenderGLFontInit(int font, float pt, const char* fontpath)
+{
+	FILE* fp = fopen(fontpath, "rb");
+	if (!fp) return false;
+	fseek(fp, 0, SEEK_END);
+	int size = ftell(fp);
+	fseek(fp, 0, SEEK_SET);
+
+	unsigned char* ttfBuffer = (unsigned char*)malloc(size);
+	if (!ttfBuffer)
+	{
+		fclose(fp);
+		return false;
+	}
+
+	fread(ttfBuffer, 1, size, fp);
+	fclose(fp);
+	fp = 0;
+
+	fonts[font].face = fonsAddFontMem(fs, "sans", (unsigned char *)(ttfBuffer), size, 1);
+	fonts[font].size = pt;
+
+	//free(ttfBuffer);
+	return true;
+}
+
+bool imguiRenderGLFontInit(int font, float pt, const void *buf, unsigned size)
+{
+	if( !buf )
+		return false;
+	if( !size )
+		return false;
+
+	// Add font to stash.
+	fonts[font].face = fonsAddFontMem(fs, "sans", (unsigned char *)(buf), size, 0);
+	fonts[font].size = pt;
 
 	return true;
 }
@@ -544,139 +563,28 @@ static void getBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_ind
 	*xpos += b->xadvance;
 }
 
-static const float g_tabStops[4] = {150, 210, 270, 330};
-
-static float getTextLength(stbtt_bakedchar *chardata, const char* text)
-{
-	float xpos = 0;
-	float len = 0;
-	while (*text)
-	{
-		int c = (unsigned char)*text;
-		if (c == '\t')
-		{
-			for (int i = 0; i < 4; ++i)
-			{
-				if (xpos < g_tabStops[i])
-				{
-					xpos = g_tabStops[i];
-					break;
-				}
-			}
-		}
-		else if (c >= 32 && c < 128)
-		{
-			stbtt_bakedchar *b = chardata + c-32;
-			int round_x = STBTT_ifloor((xpos + b->xoff) + 0.5);
-			len = round_x + b->x1 - b->x0 + 0.5f;
-			xpos += b->xadvance;
-		}
-		++text;
-	}
-	return len;
+static void setText( int font ) {
+	fonsSetFont(fs, fonts[font].face);
+	fonsSetSize(fs, fonts[font].size);
+	fonsSetAlign(fs, IMGUI_ALIGN_CENTER | IMGUI_ALIGN_BASELINE );
 }
 
-static void drawText(float x, float y, const char *text, int align, unsigned int col)
-{
-	if (!g_ftex) return;
-	if (!text) return;
+float imguiRenderGLFontGetWidth( const char* ftext ) {
+	float bounds[4];
+	setText(ftext[0]);
+	fonsTextBounds(fs, &ftext[1], 0, bounds);
+	return bounds[2] - bounds[0];
+}
 
-	if (align == IMGUI_ALIGN_CENTER)
-		x -= getTextLength(g_cdata, text)/2;
-	else if (align == IMGUI_ALIGN_RIGHT)
-		x -= getTextLength(g_cdata, text);
-$GL3(
-	float r = (float) (col&0xff) / 255.f;
-	float g = (float) ((col>>8)&0xff) / 255.f;
-	float b = (float) ((col>>16)&0xff) / 255.f;
-	float a = (float) ((col>>24)&0xff) / 255.f;
-)
-$GL2(
-	glColor4ub(col&0xff, (col>>8)&0xff, (col>>16)&0xff, (col>>24)&0xff);
+static void drawText(float x, float y, const char *ftext, int align, unsigned int col) {
+	setText(ftext[0]);
+	fonsSetColor(fs, col);
+	fonsSetAlign(fs, align );
 
-	glEnable(GL_TEXTURE_2D);
-)
-	// assume orthographic projection with units = screen pixels, origin at top left
-	glBindTexture(GL_TEXTURE_2D, g_ftex);
-$GL2(
-	glBegin(GL_TRIANGLES);
-)
-	const float ox = x;
+	// void fonsSetSpacing(struct FONScontext* s, float spacing);
+	// void fonsSetBlur(struct FONScontext* s, float blur);
 
-	while (*text)
-	{
-		int c = (unsigned char)*text;
-		if (c == '\t')
-		{
-			for (int i = 0; i < 4; ++i)
-			{
-				if (x < g_tabStops[i]+ox)
-				{
-					x = g_tabStops[i]+ox;
-					break;
-				}
-			}
-		}
-		else if (c >= 32 && c < 128)
-		{
-			stbtt_aligned_quad q;
-			getBakedQuad(g_cdata, 512,512, c-32, &x,&y,&q);
-$GL3(
-			float v[12] = {
-				q.x0, q.y0,
-				q.x1, q.y1,
-				q.x1, q.y0,
-				q.x0, q.y0,
-				q.x0, q.y1,
-				q.x1, q.y1,
-			  };
-			float uv[12] = {
-				q.s0, q.t0,
-				q.s1, q.t1,
-				q.s1, q.t0,
-				q.s0, q.t0,
-				q.s0, q.t1,
-				q.s1, q.t1,
-			  };
-			float c[24] = {
-				r, g, b, a,
-				r, g, b, a,
-				r, g, b, a,
-				r, g, b, a,
-				r, g, b, a,
-				r, g, b, a,
-			  };
-			glBindVertexArray(g_vao);
-			glBindBuffer(GL_ARRAY_BUFFER, g_vbos[0]);
-			glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), v, GL_STATIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, g_vbos[1]);
-			glBufferData(GL_ARRAY_BUFFER, 12*sizeof(float), uv, GL_STATIC_DRAW);
-			glBindBuffer(GL_ARRAY_BUFFER, g_vbos[2]);
-			glBufferData(GL_ARRAY_BUFFER, 24*sizeof(float), c, GL_STATIC_DRAW);
-			glDrawArrays(GL_TRIANGLES, 0, 6);
-)
-$GL2(
-			glTexCoord2f(q.s0, q.t0);
-			glVertex2f(q.x0, q.y0);
-			glTexCoord2f(q.s1, q.t1);
-			glVertex2f(q.x1, q.y1);
-			glTexCoord2f(q.s1, q.t0);
-			glVertex2f(q.x1, q.y0);
-
-			glTexCoord2f(q.s0, q.t0);
-			glVertex2f(q.x0, q.y0);
-			glTexCoord2f(q.s0, q.t1);
-			glVertex2f(q.x0, q.y1);
-			glTexCoord2f(q.s1, q.t1);
-			glVertex2f(q.x1, q.y1);
-)
-		}
-		++text;
-	}
-$GL2(
-	glEnd();
-	glDisable(GL_TEXTURE_2D);
-)
+	fonsDrawText(fs, x,y, &ftext[1], NULL);
 }
 
 void imguiRenderGLDraw(int width, int height)

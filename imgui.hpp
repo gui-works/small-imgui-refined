@@ -30,11 +30,17 @@ enum imguiMouseButton
         IMGUI_MBUT_RIGHT = 0x02,
 };
 
-enum imguiTextAlign
+enum imguiTextAlign // same than fontstash
 {
-        IMGUI_ALIGN_LEFT,
-        IMGUI_ALIGN_CENTER,
-        IMGUI_ALIGN_RIGHT,
+        // Horizontal align
+        IMGUI_ALIGN_LEFT         = 1<<0, // Default
+        IMGUI_ALIGN_CENTER       = 1<<1,
+        IMGUI_ALIGN_RIGHT        = 1<<2,
+        // Vertical align
+        IMGUI_ALIGN_TOP          = 1<<3,
+        IMGUI_ALIGN_MIDDLE       = 1<<4,
+        IMGUI_ALIGN_BOTTOM       = 1<<5,
+        IMGUI_ALIGN_BASELINE     = 1<<6  // Default
 };
 
 inline unsigned int imguiRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a=255)
@@ -56,8 +62,10 @@ void imguiIndent();
 void imguiUnindent();
 void imguiSeparator();
 void imguiSeparatorLine();
-//void imguiTabulator();
-//void imguiTabulatorLine();
+
+//void imguiTab();
+//void imguiTabLine();
+//void imguiFeed();
 
 // widgets
 
@@ -74,9 +82,11 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
 bool imguiRadio(const char* text, size_t n_options, const char** options, int &clicked, bool enabled = true);
 void imguiPair(const char *text, const char *value);
 void imguiProgressBar(const char* text, float val, bool show_decimals = false);
+bool imguiBitmask(const char* text, unsigned* mask, int bits, bool enabled = true);
 
 // rendering
 
+extern float imguiRenderGLFontGetWidth(const char* ftext);
 void imguiDrawText(int x, int y, imguiTextAlign align, const char* text, unsigned int color);
 void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int color);
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color);

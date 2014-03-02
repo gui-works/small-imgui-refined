@@ -409,7 +409,7 @@ bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scr
 
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 6, black_alpha(192) );
 
-        addGfxCmdText(x+AREA_HEADER/2, y+h-AREA_HEADER/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, name, white_alpha(128) );
+        addGfxCmdText(x+AREA_HEADER/2, y+h-AREA_HEADER/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, name, white_alpha(128) );
 
         if( g_scrollVal ) { // @rlyeh: support for fixed areas
               addGfxCmdScissor(
@@ -514,9 +514,9 @@ bool imguiButton(const char* text, bool enabled)
 
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, isActive(id) ? gray_alpha(196) : gray_alpha(96) );
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
+                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(200) );
+                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(200) );
 
         return res;
 }
@@ -539,9 +539,9 @@ bool imguiItem(const char* text, bool enabled)
                 addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 2.0f, isActive(id) ? theme_alpha(192) : theme_alpha(96) );
 
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, theme_alpha(200) );
+                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, theme_alpha(200) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(200) );
+                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(200) );
 
         return res;
 }
@@ -572,9 +572,9 @@ bool imguiCheck(const char* text, bool checked, bool enabled)
         }
 
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? theme_alpha(256) : theme_alpha(200) );
+                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(256) : theme_alpha(200) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(200) );
+                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(200) );
 
         return res;
 }
@@ -602,12 +602,12 @@ bool imguiCollapse(const char* text, const char* subtext, bool checked, bool ena
                 addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
 
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
+                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
+                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
 
         if (subtext)
-                addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, subtext, theme_alpha(128));
+                addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, subtext, theme_alpha(128));
 
         return res;
 }
@@ -617,7 +617,7 @@ void imguiLabel(const char* text)
         int x = g_state.widgetX;
         int y = g_state.widgetY - BUTTON_HEIGHT;
         g_state.widgetY -= BUTTON_HEIGHT;
-        addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, theme_alpha(256) );
+        addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, theme_alpha(256) );
 }
 
 void imguiValue(const char* text)
@@ -627,7 +627,7 @@ void imguiValue(const char* text)
         const int w = g_state.widgetW;
         g_state.widgetY -= BUTTON_HEIGHT;
 
-        addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, text, theme_alpha(192) );
+        addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, text, theme_alpha(192) );
 }
 
 bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, bool enabled)
@@ -687,13 +687,13 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
 
         if (enabled)
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
         }
         else
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, gray_alpha(192) );
+                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
+                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, gray_alpha(192) );
         }
 
         return res || valChanged;
@@ -830,13 +830,13 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
 
         if (enabled)
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
         }
         else
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, gray_alpha(192) );
+                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
+                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, gray_alpha(192) );
         }
 
         return is_res || has_changed;
@@ -851,13 +851,13 @@ bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
     unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
     int x = g_state.widgetX;
     int y = g_state.widgetY - BUTTON_HEIGHT;
-    addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, white_alpha(255));
-    unsigned int textLen = unsigned int(strlen(text)*6.5);
+    addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, white_alpha(255));
+    unsigned int textLen = (unsigned int)( imguiRenderGLFontGetWidth( text ) );
     //--
     //Handle keyboard input if any
     unsigned int L = strlen(buffer);
     if(isInputable(id) && g_state.ascii == 0x08 && g_state.ascii!=g_state.lastAscii)//backspace
-        buffer[L-1]=0;
+    {    if(L>1) buffer[L-1]=0; }
     else if(isInputable(id) && g_state.ascii == 0x0D && g_state.ascii!=g_state.lastAscii)//enter
         g_state.inputable = 0;
     else if(isInputable(id) && L < bufferLength-1 && g_state.ascii!=0 && g_state.ascii!=g_state.lastAscii){
@@ -873,7 +873,7 @@ bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
     bool over = inRect(x, y, w, h);
     res = textInputLogic(id, over);
     addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, isInputable(id) ? theme_alpha(256):gray_alpha(96));
-    addGfxCmdText(x+7, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, buffer, isInputable(id) ? black_alpha(256): white_alpha(256));
+    addGfxCmdText(x+7, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, buffer, isInputable(id) ? black_alpha(256): white_alpha(256));
     //--
     g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
     return res;
@@ -909,7 +909,7 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
 
         addGfxCmdTriangle((float)cx, (float)cy, CHECK_SIZE, CHECK_SIZE, choosing ? 2 : 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
 
-        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, clicked < 0 ? text : options[clicked], theme_alpha(192) );
+        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, clicked < 0 ? text : options[clicked], theme_alpha(192) );
 
         //addGfxCmdRoundedRect(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, isActive(id) ? theme_alpha(256) : theme_alpha(192));
 
@@ -922,7 +922,7 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
 
         addGfxCmdTriangle((float)cx, (float)cy, CHECK_SIZE, CHECK_SIZE, choosing ? 2 : 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
 
-        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, clicked < 0 ? text : options[clicked], gray_alpha(192) );
+        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, clicked < 0 ? text : options[clicked], gray_alpha(192) );
 
         //addGfxCmdRoundedRect(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, isActive(id) ? theme_alpha(256) : theme_alpha(192));
     }
@@ -974,9 +974,9 @@ bool imguiRadio(const char* text, size_t n_options, const char** options, int &c
     bool res = buttonLogic(id, over);
 
     if (enabled)
-            addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
+            addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
     else
-            addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
+            addGfxCmdText(cx, cy, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
 
     bool result = false;
 
@@ -1026,8 +1026,66 @@ void imguiProgressBar(const char* text, float val, bool show_decimals)
     else
     sprintf(msg, "%d%%", int(val) );
 
-    addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, theme_alpha(192) );
-    addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, theme_alpha(192) );
+    addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, theme_alpha(192) );
+    addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, theme_alpha(192) );
+}
+
+bool imguiBitmask(const char* text, unsigned *mask, int bits, bool enabled)
+{
+    int x = g_state.widgetX;
+    int y = g_state.widgetY - BUTTON_HEIGHT;
+    int w = g_state.widgetW;
+    int h = BUTTON_HEIGHT;
+    g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
+
+    //--
+    //Handle label
+    g_state.widgetId++;
+    unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+//    addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, white_alpha(255));
+    if (enabled)
+        addGfxCmdText(x+DEFAULT_SPACING, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(256) : theme_alpha(200) );
+    else
+        addGfxCmdText(x+DEFAULT_SPACING, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(200) );
+    unsigned int textLen = (unsigned int)imguiRenderGLFontGetWidth(text) + DEFAULT_SPACING;
+    //--
+
+        bool ress = false;
+        unsigned before = *mask;
+
+        const int cxx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
+        const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
+        for( int i = 0; i < bits; ++i ) { //bits; i-- > 0; ) {
+
+            int cx = textLen + cxx + (bits-1-i) * (CHECK_SIZE+6);
+            bool checked = ((*mask) & (1<<i)) == (1<<i);
+
+            g_state.widgetId++;
+            unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+            bool over = enabled && inRect((float)cx-3, (float)cy-3, (float)CHECK_SIZE+6, (float)CHECK_SIZE+6, true);
+            bool res = buttonLogic(id, over);
+
+            if( res ) {
+                ress |= res;
+                (*mask) ^= (1<<i);
+            }
+
+            //addGfxCmdRoundedRect((float)cx-3, (float)cy-3, (float)CHECK_SIZE+6, (float)CHECK_SIZE+6, 4,  isActive(id) ? gray_alpha(196) : gray_alpha(96) );
+            if (checked)
+            {
+                    if (enabled)
+                            addGfxCmdRoundedRect((float)cx, (float)cy, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, isActive(id) ? theme_alpha(256) : theme_alpha(200));
+                    else
+                            addGfxCmdRoundedRect((float)cx, (float)cy, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, gray_alpha(200) );
+            } else {
+                    if (enabled)
+                            addGfxCmdRoundedRect((float)cx+CHECK_SIZE/4, (float)cy+CHECK_SIZE/4, (float)CHECK_SIZE/2, (float)CHECK_SIZE/2, (float)CHECK_SIZE/8-1, isActive(id) ? theme_alpha(256) : theme_alpha(200));
+                    else
+                            addGfxCmdRoundedRect((float)cx+CHECK_SIZE/4, (float)cy+CHECK_SIZE/4, (float)CHECK_SIZE/2, (float)CHECK_SIZE/2, (float)CHECK_SIZE/8-1, gray_alpha(200) );
+            }
+        }
+
+        return ress | (before != *mask);
 }
 
 void imguiIndent()
