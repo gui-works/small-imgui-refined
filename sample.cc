@@ -105,6 +105,8 @@ $apple( $GL3(
     bool checked4 = false;
     float value1 = 50.f;
     float value2 = 30.f;
+    float value3A = 33.f, value3B = 66.f;
+    float value4A = 33.f, value4B = 66.f;
     int scrollarea1 = 0;
     int scrollarea2 = 0;
 
@@ -194,8 +196,13 @@ $apple( $GL3(
             checked4 = !checked4;
         imguiLabel("Label");
         imguiValue("Value");
+
         imguiSlider("Slider", &value1, 0.f, 100.f, 1.f);
         imguiSlider("Disabled slider", &value2, 0.f, 100.f, 1.f, false);
+
+        imguiRange("Range", &value3A, &value3B, 0.f, 100.f, 1.f);
+        imguiRange("Disabled range", &value4A, &value4B, 0.f, 100.f, 1.f, false);
+
         imguiIndent();
         imguiLabel("Indented");
         imguiUnindent();
@@ -204,7 +211,13 @@ $apple( $GL3(
         imguiTextInput("Text input", input, 15);
 
         imguiPair( "hello", "pair" );
-        imguiProgressBar( "progress bar", 50 );
+
+        {
+            static float percent = 0.f;
+            percent += 0.1f;
+            if( percent > 100.f ) percent = 0.f;
+            imguiProgressBar( "progress bar", percent );
+        }
 
         {
             const char *list[] = {"hello", "world"};

@@ -79,6 +79,16 @@ static void addGfxCmdScissor(int x, int y, int w, int h)
         cmd.rect.h = (short)h;
 }
 
+static imguiGfxRect getLastGfxCmdRect()
+{
+    for ( int i = g_gfxCmdQueueSize; i-- > 0; ) {
+        imguiGfxCmd& cmd = g_gfxCmdQueue[i];
+        if( cmd.type == IMGUI_GFXCMD_RECT )
+            return cmd.rect;
+    }
+    return imguiGfxRect();
+}
+
 static void addGfxCmdRect(float x, float y, float w, float h, unsigned int color)
 {
         if (g_gfxCmdQueueSize >= GFXCMD_QUEUE_SIZE)
@@ -663,10 +673,12 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
                 }
         }
 
-        if (isActive(id))
-                addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, theme_alpha(256) );
-        else
-                addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, isHot(id) ? theme_alpha(128) : theme_alpha(64) );
+        unsigned int col = gray_alpha(64);
+        if( enabled ) {
+            if (isActive(id)) col = theme_alpha(256);
+            else col = isHot(id) ? theme_alpha(128) : theme_alpha(64);
+        }
+        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, col );
 
         // TODO: fix this, take a look at 'nicenum'.
         int digits = (int)(std::ceilf(std::log10f(vinc)));
@@ -685,6 +697,149 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         }
 
         return res || valChanged;
+}
+
+bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vmax, float vinc, bool enabled)
+{
+        int x = g_state.widgetX;
+        int y = g_state.widgetY - BUTTON_HEIGHT;
+        int w = g_state.widgetW;
+        int h = SLIDER_HEIGHT;
+        g_state.widgetY -= SLIDER_HEIGHT + DEFAULT_SPACING;
+
+// dims
+
+        if(  vmin >  vmax ) { float swap = vmin;   vmin = vmax;   vmax = swap; }
+        if( *val0 > *val1 ) { float swap = *val0; *val0 = *val1; *val1 = swap; }
+        if( *val0 <  vmin ) { *val0 = vmin; }
+        if( *val1 >  vmax ) { *val1 = vmax; }
+
+        const int range = w - SLIDER_MARKER_WIDTH;
+
+        float u0 = (*val0 - vmin) / (vmax-vmin);
+        if (u0 < 0) u0 = 0;
+        if (u0 > 1) u0 = 1;
+        int m0 = (int)(u0 * range);
+
+        float u1 = (*val1 - vmin) / (vmax-vmin);
+        if (u1 < 0) u1 = 0;
+        if (u1 > 1) u1 = 1;
+        int m1 = (int)(u1 * range);
+
+// button
+
+        addGfxCmdRoundedRect((float)x + m0, (float)y, (float)m1 - m0 + SLIDER_MARKER_WIDTH, (float)h, 4.0f, enabled ? theme_alpha(64) : gray_alpha(64) );
+        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
+
+        bool is_highlighted = false;
+        bool is_res = false;
+        bool has_changed = false;
+
+// slide #0
+{
+        float *val = val0;
+        float u = u0, m = m0;
+
+        g_state.widgetId++;
+        unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_HEIGHT, true);
+        bool res = buttonLogic(id, over);
+        bool valChanged = false;
+
+        if (isActive(id))
+        {
+                if (g_state.wentActive)
+                {
+                        g_state.dragX = g_state.mx;
+                        g_state.dragOrig = u;
+                }
+                if (g_state.dragX != g_state.mx)
+                {
+                        u = g_state.dragOrig + (float)(g_state.mx - g_state.dragX) / (float)range;
+                        if (u < 0) u = 0;
+                        if (u > 1) u = 1;
+                        *val = vmin + u*(vmax-vmin);
+                        *val = floorf(*val/vinc+0.5f)*vinc; // Snap to vinc
+                        m = (int)(u * range);
+                        valChanged = true;
+                }
+        }
+
+        unsigned int col = gray_alpha(64);
+        if( enabled ) {
+            if (isActive(id)) col = theme_alpha(256);
+            else col = isHot(id) ? theme_alpha(128) : theme_alpha(64);
+        }
+        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, col );
+
+        is_highlighted |= ( isHot(id) | isActive(id) );
+        is_res |= res;
+        has_changed |= valChanged;
+}
+
+// slide #1
+{
+        float *val = val1;
+        float u = u1, m = m1;
+
+        g_state.widgetId++;
+        unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_HEIGHT, true);
+        bool res = buttonLogic(id, over);
+        bool valChanged = false;
+
+        if (isActive(id))
+        {
+                if (g_state.wentActive)
+                {
+                        g_state.dragX = g_state.mx;
+                        g_state.dragOrig = u;
+                }
+                if (g_state.dragX != g_state.mx)
+                {
+                        u = g_state.dragOrig + (float)(g_state.mx - g_state.dragX) / (float)range;
+                        if (u < 0) u = 0;
+                        if (u > 1) u = 1;
+                        *val = vmin + u*(vmax-vmin);
+                        *val = floorf(*val/vinc+0.5f)*vinc; // Snap to vinc
+                        m = (int)(u * range);
+                        valChanged = true;
+                }
+        }
+
+        unsigned int col = gray_alpha(64);
+        if( enabled ) {
+            if (isActive(id)) col = theme_alpha(256);
+            else col = isHot(id) ? theme_alpha(128) : theme_alpha(64);
+        }
+        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, col );
+
+        is_highlighted |= ( isHot(id) | isActive(id) );
+        is_res |= res;
+        has_changed |= valChanged;
+}
+
+// text
+
+        // TODO: fix this, take a look at 'nicenum'.
+        int digits = (int)(std::ceilf(std::log10f(vinc)));
+        char msg[128];
+        sprintf(msg, "%.*f - %.*f", digits >= 0 ? 0 : -digits, *val0, digits >= 0 ? 0 : -digits, *val1);
+
+        if (enabled)
+        {
+                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+        }
+        else
+        {
+                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT, text, gray_alpha(192) );
+                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT, msg, gray_alpha(192) );
+        }
+
+        return is_res || has_changed;
 }
 
 bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
