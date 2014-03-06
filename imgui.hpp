@@ -63,6 +63,13 @@ void imguiUnindent();
 void imguiSeparator();
 void imguiSeparatorLine();
 
+void imguiStackPush();
+ int imguiStackSet( int stackpos );
+void imguiSpaceDiv();
+void imguiSpaceMul();
+void imguiSpaceShift();
+void imguiSpaceUnshift();
+
 //void imguiTab();
 //void imguiTabLine();
 //void imguiFeed();
@@ -73,7 +80,7 @@ bool imguiButton(const char* text, bool enabled = true);
 bool imguiCheck(const char* text, bool checked, bool enabled = true);
 bool imguiCollapse(const char* text, const char* subtext, bool checked, bool enabled = true);
 bool imguiItem(const char* text, bool enabled = true);
-bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength);
+bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength, bool enabled = true);
 void imguiLabel(const char* text);
 void imguiValue(const char* text);
 bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, bool enabled = true);
@@ -84,9 +91,12 @@ void imguiPair(const char *text, const char *value);
 void imguiProgressBar(const char* text, float val, bool show_decimals = false);
 bool imguiBitmask(const char* text, unsigned* mask, int bits, bool enabled = true);
 
-// rendering
+//bool imguiLink();
+//      bool imguiImage();
+//bool imguiUnlink();
 
-extern float imguiRenderGLFontGetWidth(const char* ftext);
+// rendering
+ int imguiCalcText(const char *text);
 void imguiDrawText(int x, int y, imguiTextAlign align, const char* text, unsigned int color);
 void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int color);
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color);

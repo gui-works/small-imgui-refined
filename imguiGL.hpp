@@ -58,6 +58,5 @@
 
  bool imguiRenderGLFontInit(int font, float pt, const void *data, unsigned size);
  bool imguiRenderGLFontInit(int font, float pt, const char* fontpath);
-float imguiRenderGLFontGetWidth(const char* fstring);
 
 #endif // IMGUIGL_HPP

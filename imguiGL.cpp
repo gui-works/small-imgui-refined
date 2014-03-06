@@ -386,9 +386,31 @@ static void drawLine(float x0, float y0, float x1, float y1, float r, float fth,
 	drawPolygon(verts, 4, fth, col);
 }
 
+extern int (*imguiRenderCalcText)(const char *text);
+
+static bool setText( int font ) {
+	bool ok = true;
+	if( font <= 0 || font > 7 ) font = 1, ok = false;
+	fonsSetFont(fs, fonts[font].face);
+	fonsSetSize(fs, fonts[font].size);
+	fonsSetAlign(fs, IMGUI_ALIGN_CENTER | IMGUI_ALIGN_BASELINE );
+	return ok;
+}
+
+int imguiRenderGLFontGetWidth( const char* ftext ) {
+	float bounds[4];
+	if( setText(ftext[0]) ) {
+		fonsTextBounds(fs, &ftext[1], 0, bounds);
+	} else {
+		fonsTextBounds(fs, &ftext[0], 0, bounds);
+	}
+	return int( bounds[2] - bounds[0] );
+}
 
 bool imguiRenderGLInit()
 {
+	imguiRenderCalcText = imguiRenderGLFontGetWidth;
+
 	for (int i = 0; i < CIRCLE_VERTS; ++i)
 	{
 		float a = (float)i/(float)CIRCLE_VERTS * PI*2;
@@ -563,28 +585,18 @@ static void getBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_ind
 	*xpos += b->xadvance;
 }
 
-static void setText( int font ) {
-	fonsSetFont(fs, fonts[font].face);
-	fonsSetSize(fs, fonts[font].size);
-	fonsSetAlign(fs, IMGUI_ALIGN_CENTER | IMGUI_ALIGN_BASELINE );
-}
-
-float imguiRenderGLFontGetWidth( const char* ftext ) {
-	float bounds[4];
-	setText(ftext[0]);
-	fonsTextBounds(fs, &ftext[1], 0, bounds);
-	return bounds[2] - bounds[0];
-}
-
 static void drawText(float x, float y, const char *ftext, int align, unsigned int col) {
-	setText(ftext[0]);
-	fonsSetColor(fs, col);
-	fonsSetAlign(fs, align );
-
-	// void fonsSetSpacing(struct FONScontext* s, float spacing);
-	// void fonsSetBlur(struct FONScontext* s, float blur);
-
-	fonsDrawText(fs, x,y, &ftext[1], NULL);
+	if( setText(ftext[0]) ) {
+		fonsSetColor(fs, col);
+		fonsSetAlign(fs, align );
+		// void fonsSetSpacing(struct FONScontext* s, float spacing);
+		// void fonsSetBlur(struct FONScontext* s, float blur);
+		fonsDrawText(fs, x,y, &ftext[1], NULL);
+	} else {
+		fonsSetColor(fs, col);
+		fonsSetAlign(fs, align );
+		fonsDrawText(fs, x,y, &ftext[0], NULL);
+	}
 }
 
 void imguiRenderGLDraw(int width, int height)
