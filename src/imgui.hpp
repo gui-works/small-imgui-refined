@@ -43,11 +43,6 @@ enum imguiTextAlign // same than fontstash
         IMGUI_ALIGN_BASELINE     = 1<<6  // Default
 };
 
-inline unsigned int imguiRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a=255)
-{
-        return (r) | (g << 8) | (b << 16) | (a << 24);
-}
-
 void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll, char asciiCode=0);
 void imguiEndFrame();
 
@@ -76,31 +71,55 @@ void imguiSpaceUnshift();
 
 // widgets
 
-bool imguiButton(const char* text, bool enabled = true);
-bool imguiCheck(const char* text, bool checked, bool enabled = true);
-bool imguiCollapse(const char* text, const char* subtext, bool checked, bool enabled = true);
-bool imguiItem(const char* text, bool enabled = true);
-bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength, bool enabled = true);
+bool imguiButton(const char* text);
+bool imguiCheck(const char* text, bool checked);
+bool imguiCollapse(const char* text, const char* subtext, bool checked);
+bool imguiItem(const char* text);
+bool imguiText(const char* text);
+bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength);
 void imguiLabel(const char* text);
 void imguiValue(const char* text);
-bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, bool enabled = true);
-bool imguiRange(const char* text, float* val0, float* val1, float vmin, float vmax, float vinc, bool enabled = true);
-bool imguiList(const char* text, size_t n_options, const char** options, int &choosing, int &clicked, bool enabled = true);
-bool imguiRadio(const char* text, size_t n_options, const char** options, int &clicked, bool enabled = true);
+bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, const char *format = "%d");
+bool imguiRange(const char* text, float* val0, float* val1, float vmin, float vmax, float vinc, const char *format = "%d - %d");
+bool imguiList(const char* text, size_t n_options, const char** options, int &choosing, int &clicked);
+bool imguiRadio(const char* text, size_t n_options, const char** options, int &clicked);
 void imguiPair(const char *text, const char *value);
 void imguiProgressBar(const char* text, float val, bool show_decimals = false);
-bool imguiBitmask(const char* text, unsigned* mask, int bits, bool enabled = true);
+bool imguiBitmask(const char* text, unsigned* mask, int bits);
 
 //bool imguiLink();
 //      bool imguiImage();
 //bool imguiUnlink();
 
 // rendering
- int imguiCalcText(const char *text);
 void imguiDrawText(int x, int y, imguiTextAlign align, const char* text, unsigned int color);
 void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int color);
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color);
 void imguiDrawRect(float x, float y, float w, float h, unsigned int color);
+
+// text
+int imguiTextLength(const char *text);
+
+// color
+unsigned int imguiHSLA(float h, float s, float l, unsigned char a=255);
+unsigned int imguiRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a=255);
+void imguiPushColor( unsigned int col );
+void imguiPopColor();
+void imguiPushColorTheme();
+
+//
+int imguiShowDialog( const char *text, int *answer );
+
+// enable
+void imguiPushEnable( int enabled = 1 );
+void imguiPopEnable();
+
+// mouse
+enum {
+        IMGUI_MOUSE_ARROW = 1,
+        IMGUI_MOUSE_HAND = 2
+};
+int imguiGetMouseCursor();
 
 // Pull render interface.
 enum imguiGfxCmdType

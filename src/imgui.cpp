@@ -130,7 +130,19 @@ static void imguiResetCaret() {
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-int (*imguiRenderCalcText)(const char* text) = 0;
+static int mouse = 0;
+
+static void imguiResetMouse() {
+    mouse = IMGUI_MOUSE_ARROW;
+}
+
+int imguiGetMouseCursor() {
+    return mouse;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int (*imguiRenderTextLength)(const char* text) = 0;
 
 static const unsigned TEXT_POOL_SIZE = 8000;
 static char g_textPool[TEXT_POOL_SIZE];
@@ -424,6 +436,10 @@ static bool buttonLogic(unsigned int id, bool over)
         if (isHot(id))
                 g_state.isHot = true;
 
+        if(g_state.isHot) {
+            mouse = IMGUI_MOUSE_HAND;
+        }
+
         return res;
 }
 
@@ -466,6 +482,7 @@ static void updateInput(int mx, int my, unsigned char mbut, int scroll, char asc
 void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll, char asciiCode/*=0*/)
 {
         imguiResetCaret();
+        imguiResetMouse();
         imguiResetColors();
         imguiResetEnables();
 
@@ -682,6 +699,13 @@ bool imguiItem(const char* text)
         int y = g_state.widgetY - BUTTON_HEIGHT;
         int w = g_state.widgetW;
         int h = BUTTON_HEIGHT;
+
+        g_state.widgetX += w;
+        g_state.widgetW -= w;
+        g_state.push();
+        g_state.widgetX -= w;
+        g_state.widgetW += w;
+        g_state.push();
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
@@ -706,8 +730,15 @@ bool imguiText(const char* text)
 
         int x = g_state.widgetX;
         int y = g_state.widgetY - BUTTON_HEIGHT;
-        int w = g_state.widgetW;
+        int w = imguiTextLength(text);
         int h = BUTTON_HEIGHT;
+
+        g_state.widgetX += w;
+        g_state.widgetW -= w;
+        g_state.push();
+        g_state.widgetX -= w;
+        g_state.widgetW += w;
+        g_state.push();
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
@@ -715,9 +746,9 @@ bool imguiText(const char* text)
         bool res = buttonLogic(id, over);
 
         if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(200) : theme_alpha(192) );
+                addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(200) : theme_alpha(192) );
         else
-                addGfxCmdText(x+BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(200) );
+                addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(200) );
 
         return res;
 }
@@ -1041,7 +1072,7 @@ bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
     int x = g_state.widgetX;
     int y = g_state.widgetY - BUTTON_HEIGHT;
     addGfxCmdText(x, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, enabled ? white_alpha(255) : gray_alpha(128));
-    unsigned int textLen = (unsigned int)( imguiCalcText( text ) );
+    unsigned int textLen = (unsigned int)( imguiTextLength( text ) );
     //--
     //Handle keyboard input if any
     unsigned int L = strlen(buffer);
@@ -1250,7 +1281,7 @@ bool imguiBitmask(const char* text, unsigned *mask, int bits)
         addGfxCmdText(x+DEFAULT_SPACING, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(256) : theme_alpha(200) );
     else
         addGfxCmdText(x+DEFAULT_SPACING, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(200) );
-    unsigned int textLen = (unsigned int)( imguiCalcText(text) );
+    unsigned int textLen = (unsigned int)( imguiTextLength(text) );
     //--
 
         bool ress = false;
@@ -1259,7 +1290,7 @@ bool imguiBitmask(const char* text, unsigned *mask, int bits)
         const int cxx = x + textLen + ( textLen > 0 ? 1 : 0 ) * DEFAULT_SPACING + CHECK_SIZE/2;
         const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
 
-int offset = (cxx - x) + bits * (CHECK_SIZE+6);
+int offset = (cxx - x) + bits * (CHECK_SIZE+8);
 g_state.widgetX += offset;
 g_state.widgetW -= offset;
 g_state.push();
@@ -1271,12 +1302,12 @@ g_state.push();
 
         for( int i = 0; i < bits; ++i ) { //bits; i-- > 0; ) {
 
-            int cx = cxx + (bits-1-i) * (CHECK_SIZE+6);
+            int cx = cxx + (bits-1-i) * (CHECK_SIZE+8);
             bool checked = ((*mask) & (1<<i)) == (1<<i);
 
             g_state.widgetId++;
             unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
-            bool over = enabled && inRect((float)cx-3, (float)cy-3, (float)CHECK_SIZE+6, (float)CHECK_SIZE+6, true);
+            bool over = enabled && inRect((float)cx-3, (float)cy-3, (float)CHECK_SIZE+8, (float)CHECK_SIZE+8, true);
             bool res = buttonLogic(id, over);
 
             if( res ) {
@@ -1284,7 +1315,7 @@ g_state.push();
                 (*mask) ^= (1<<i);
             }
 
-            //addGfxCmdRoundedRect((float)cx-3, (float)cy-3, (float)CHECK_SIZE+6, (float)CHECK_SIZE+6, 4,  isActive(id) ? gray_alpha(196) : gray_alpha(96) );
+            //addGfxCmdRoundedRect((float)cx-3, (float)cy-3, (float)CHECK_SIZE+8, (float)CHECK_SIZE+8, 4,  isActive(id) ? gray_alpha(196) : gray_alpha(96) );
             if (checked)
             {
                     if (enabled)
@@ -1382,9 +1413,9 @@ void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned 
         addGfxCmdRoundedRect(x, y, w, h, r, color);
 }
 
-int imguiCalcText( const char *text )
+int imguiTextLength( const char *text )
 {
-    return (*imguiRenderCalcText)(text);
+    return (*imguiRenderTextLength)(text);
 }
 
 static float imgui__modf(float a, float b) { return fmodf(a, b); }

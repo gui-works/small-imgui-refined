@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(craft)
+project(imgui)
 
 if (CMAKE_BUILD_TYPE MATCHES "[Dd][Ee][Bb][Uu][Gg]")
     if(MSVC)
@@ -19,14 +19,18 @@ else()
 endif()
 
 add_subdirectory(deps/glfw)
+include_directories(src)
 include_directories(deps/glew/include)
 include_directories(deps/glfw/include)
 
 add_executable(
     sample
-    sample.cc
-    imgui.cpp
-    imguiGL.cpp
+    sample/sample.cc
+    src/imgui.cpp
+    src/imguiGL.cpp
+    src/fonts/Entypo-Social.ttf.cpp
+    src/fonts/Entypo.ttf.cpp
+    src/fonts/Ubuntu-B.ttf.cpp
     deps/glew/src/glew.c
 )
 

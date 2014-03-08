@@ -386,7 +386,7 @@ static void drawLine(float x0, float y0, float x1, float y1, float r, float fth,
 	drawPolygon(verts, 4, fth, col);
 }
 
-extern int (*imguiRenderCalcText)(const char *text);
+extern int (*imguiRenderTextLength)(const char *text);
 
 static bool setText( int font ) {
 	bool ok = true;
@@ -409,7 +409,7 @@ int imguiRenderGLFontGetWidth( const char* ftext ) {
 
 bool imguiRenderGLInit()
 {
-	imguiRenderCalcText = imguiRenderGLFontGetWidth;
+	imguiRenderTextLength = imguiRenderGLFontGetWidth;
 
 	for (int i = 0; i < CIRCLE_VERTS; ++i)
 	{

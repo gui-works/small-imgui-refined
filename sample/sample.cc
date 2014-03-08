@@ -11,7 +11,8 @@
 
 #include "imgui.hpp"
 #include "imguiGL.hpp"
-
+#include "fonts/Ubuntu-B.ttf.hpp"
+#include "fonts/entypo.ttf.hpp"
 #include <GLFW/glfw3.h>
 
 unsigned int KeyUNICODE=0;
@@ -92,9 +93,14 @@ $apple( $GL3(
         fprintf(stderr, "Could not init GUI renderer.\n");
         exit(EXIT_FAILURE);
     }
-    if (!imguiRenderGLFontInit(1, 14.f, "Ubuntu-B.ttf"))
+    if (!imguiRenderGLFontInit(1, 14.f, ubuntu_b_ttf::data(), ubuntu_b_ttf::size()))
     {
-        fprintf(stderr, "Could not init GUI renderer.\n");
+        fprintf(stderr, "Could not init GUI font.\n");
+        exit(EXIT_FAILURE);
+    }
+    if (!imguiRenderGLFontInit(2, 14.f, entypo_ttf::data(), entypo_ttf::size()))
+    {
+        fprintf(stderr, "Could not init GUI font.\n");
         exit(EXIT_FAILURE);
     }
 
@@ -122,7 +128,7 @@ $apple( $GL3(
     glfwSetCharCallback(window, GetUNICODE);
     glfwSetKeyCallback(window, GetControlKEY);
     char input[15];
-    sprintf(input, "\1type here");
+    sprintf(input, "type here");
 
     // main loop
     while( !glfwWindowShouldClose(window) )
@@ -172,89 +178,96 @@ $GL2(
 
         imguiBeginFrame(int(mousex), int(mousey), mousebutton, mscroll, KeyUNICODE);
 
-        imguiBeginScrollArea("\1Scroll area", 10, 10, width / 5, height - 20, &scrollarea1);
+        imguiBeginScrollArea("Scroll area", 10, 10, width / 5, height - 20, &scrollarea1);
         imguiSeparatorLine();
         imguiSeparator();
 
-        imguiButton("\1Button");
-        imguiButton("\1Disabled button", false);
-        imguiItem("\1Item");
-        imguiItem("\1Disabled item", false);
-        toggle = imguiCheck("\1Checkbox", checked1);
-        if (toggle)
+        imguiButton("Button");
+        imguiItem("Item");
+        if ( imguiCheck("Checkbox", checked1) )
             checked1 = !checked1;
-        toggle = imguiCheck("\1Disabled checkbox", checked2, false);
-        if (toggle)
-            checked2 = !checked2;
-        toggle = imguiCollapse("\1Collapse", "\1subtext", checked3);
-        if (checked3)
-        {
+
+        toggle = imguiCollapse("Collapse", "subtext", checked3);
+        if( checked3 ) {
             imguiIndent();
-            imguiLabel("\1Collapsible element");
+            imguiLabel("Collapsible element");
             imguiUnindent();
         }
-        if (toggle)
-            checked3 = !checked3;
-        toggle = imguiCollapse("\1Disabled collapse", "\1subtext", checked4, false);
-        if (toggle)
-            checked4 = !checked4;
-        imguiLabel("\1Label");
-        imguiValue("\1Value");
+        if( toggle )  checked3 = !checked3;
 
-        imguiSlider("\1Slider", &value1, 0.f, 100.f, 1.f);
-        imguiSlider("\1Disabled slider", &value2, 0.f, 100.f, 1.f, false);
+        imguiPushEnable( false );
+            imguiButton("Disabled button");
+            imguiItem("Disabled item");
+            if (imguiCheck("Disabled checkbox", checked2))
+                checked2 = !checked2;
+            toggle = imguiCollapse("Disabled collapse", "subtext", checked4);
+            if( toggle ) checked4 = !checked4;
+        imguiPopEnable();
 
-        imguiRange("\1Range", &value3A, &value3B, 0.f, 100.f, 1.f);
-        imguiRange("\1Disabled range", &value4A, &value4B, 0.f, 100.f, 1.f, false);
+        imguiPushColor( imguiRGBA(255,128,0) );
+            imguiLabel("Color");
+            imguiValue("Orange");
+            imguiPair("Key", "Value");
+        imguiPopColor();
+
+        imguiSlider("Slider", &value1, 0.f, 100.f, 1.f);
+				imguiPushEnable( false );
+				imguiSlider("Disabled slider", &value2, 0.f, 100.f, 1.f);
+				imguiPopEnable();
+
+        imguiRange("Range", &value3A, &value3B, 0.f, 100.f, 1.f);
+				imguiPushEnable(false);
+				imguiRange("Disabled range", &value4A, &value4B, 0.f, 100.f, 1.f);
+				imguiPopEnable();
 
         imguiIndent();
-        imguiLabel("\1Indented");
+        imguiLabel("Indented");
         imguiUnindent();
-        imguiLabel("\1Unindented");
+        imguiLabel("Unindented");
 
-        //imguiTextInput("\1Text input", input, 15);
+        //imguiTextInput("Text input", input, 15);
 
-        imguiPair( "\1hello", "\1pair" );
+        imguiPair( "hello", "pair" );
 
         {
             static float percent = 0.f;
             percent += 0.1f;
             if( percent > 100.f ) percent = 0.f;
-            imguiProgressBar( "\1progress bar", percent );
+            imguiProgressBar( "progress bar", percent );
         }
 
         {
-            const char *list[] = {"\1hello", "\1world"};
+            const char *list[] = {"hello", "world"};
             static int choosing = 0, clicked = 0;
-            imguiList("\1hello", 2, list, choosing, clicked );
+            imguiList("hello", 2, list, choosing, clicked );
         }
 
         {
-            const char *list[] = {"\1hello", "\1world"};
+            const char *list[] = {"hello", "world"};
             static int clicked = 0;
-            imguiRadio("\1hello", 2, list, clicked );
+            imguiRadio("hello", 2, list, clicked );
         }
 
         {
             static unsigned bitmask = 0xAA;
-            imguiBitmask("\1bitmask", &bitmask, 8 );
+            imguiBitmask("bitmask", &bitmask, 8 );
         }
 
         imguiEndScrollArea();
 
-        imguiBeginScrollArea("\1Scroll area", 20 + width / 5, 500, width / 5, height - 510, &scrollarea2);
+        imguiBeginScrollArea("Scroll area", 20 + width / 5, 500, width / 5, height - 510, &scrollarea2);
         imguiSeparatorLine();
         imguiSeparator();
         for (int i = 0; i < 100; ++i)
-            imguiLabel("\1A wall of text");
+            imguiLabel("A wall of text");
 
         imguiEndScrollArea();
         imguiEndFrame();
 
 #if 0
-        imguiDrawText(30 + width / 5 * 2, height - 20, IMGUI_ALIGN_LEFT, "\1Free text",  imguiRGBA(32,192, 32,192));
-        imguiDrawText(30 + width / 5 * 2 + 100, height - 40, IMGUI_ALIGN_RIGHT, "\1Free text",  imguiRGBA(32, 32, 192, 192));
-        imguiDrawText(30 + width / 5 * 2 + 50, height - 60, IMGUI_ALIGN_CENTER, "\1Free text",  imguiRGBA(192, 32, 32,192));
+        imguiDrawText(30 + width / 5 * 2, height - 20, IMGUI_ALIGN_LEFT, "Free text",  imguiRGBA(32,192, 32,192));
+        imguiDrawText(30 + width / 5 * 2 + 100, height - 40, IMGUI_ALIGN_RIGHT, "Free text",  imguiRGBA(32, 32, 192, 192));
+        imguiDrawText(30 + width / 5 * 2 + 50, height - 60, IMGUI_ALIGN_CENTER, "Free text",  imguiRGBA(192, 32, 32,192));
 
         imguiDrawLine(30 + width / 5 * 2, height - 80, 30 + width / 5 * 2 + 100, height - 60, 1.f, imguiRGBA(32,192, 32,192));
         imguiDrawLine(30 + width / 5 * 2, height - 100, 30 + width / 5 * 2 + 100, height - 80, 2.f, imguiRGBA(32, 32, 192, 192));

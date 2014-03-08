@@ -20,7 +20,7 @@ About
 
 The OpenGL backend was ported from OpenGL immediate mode to OpenGL 3.2 mainly to be compatible with Mac OS X core profile.
 
-This fork features cmake, smaller code base, cleanups and a few new widgets: pair, radio, list, progress bar, range.
+This fork features cmake, smaller code base, cleanups, colors and fonts remade, and a few new widgets.
 
 ![image](https://raw.github.com/r-lyeh/depot/master/imgui.png)
 
@@ -41,10 +41,10 @@ cmake . && make
 ./sample
 ```
 
-- Windows (Tested on Windows 7 with Visual Studio 2008, 2010 and 2013)
+- Windows (Tested on Windows 7 with Visual Studio 2013)
 ```
-cmake . -G "NMake Makefiles" && nmake
-sample
+cmake .. -G "Visual Studio 12" && imgui.sln && rem Most users want this
+cmake .. -G "NMake Makefiles" && nmake && rem My personal choice
 ```
 
 Usage
