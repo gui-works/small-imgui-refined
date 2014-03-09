@@ -24,6 +24,9 @@
 #ifndef IMGUI_HPP
 #define IMGUI_HPP
 
+#include <string>
+#include <vector>
+
 enum imguiMouseButton
 {
         IMGUI_MBUT_LEFT = 0x01,
@@ -43,7 +46,7 @@ enum imguiTextAlign // same than fontstash
         IMGUI_ALIGN_BASELINE     = 1<<6  // Default
 };
 
-void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll, char asciiCode=0);
+void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll, unsigned unicode=0);
 void imguiEndFrame();
 
 // masking
@@ -76,7 +79,7 @@ bool imguiCheck(const char* text, bool checked);
 bool imguiCollapse(const char* text, const char* subtext, bool checked);
 bool imguiItem(const char* text);
 bool imguiText(const char* text);
-bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength);
+bool imguiTextInput(const char* text, std::vector<unsigned> &utf32);
 void imguiLabel(const char* text);
 void imguiValue(const char* text);
 bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, const char *format = "%d");
@@ -99,6 +102,10 @@ void imguiDrawRect(float x, float y, float w, float h, unsigned int color);
 
 // text
 int imguiTextLength(const char *text);
+// utf32 to utf8
+std::string imguiTextConv(const std::vector<unsigned>& utf32 );
+// ascii to utf32
+std::vector<unsigned> imguiTextConv(const std::string& ascii );
 
 // color
 unsigned int imguiHSLA(float h, float s, float l, unsigned char a=255);

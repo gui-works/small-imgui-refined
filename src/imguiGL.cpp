@@ -449,7 +449,7 @@ $GL3(
 	g_program = glCreateProgram();
 
 	const char * vs =
-	"#version 150\n"
+	"#version 130\n"
 	"uniform vec2 Viewport;\n"
 	"in vec2 VertexPosition;\n"
 	"in vec2 VertexTexCoord;\n"
@@ -468,7 +468,7 @@ $GL3(
 	glAttachShader(g_program, vso);
 
 	const char * fs =
-	"#version 150\n"
+	"#version 130\n"
 	"in vec2 texCoord;\n"
 	"in vec4 vertexColor;\n"
 	"uniform sampler2D Texture;\n"

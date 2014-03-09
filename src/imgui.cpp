@@ -73,6 +73,28 @@ char *replace_str(const char *str, const char *old, const char *recent)
     return ret;
 }
 
+static std::string cpToUTF8(int cp)
+{
+    static char str[8];
+    int n = 0;
+    if (cp < 0x80) n = 1;
+    else if (cp < 0x800) n = 2;
+    else if (cp < 0x10000) n = 3;
+    else if (cp < 0x200000) n = 4;
+    else if (cp < 0x4000000) n = 5;
+    else if (cp <= 0x7fffffff) n = 6;
+    str[n] = '\0';
+    switch (n) {
+    case 6: str[5] = 0x80 | (cp & 0x3f); cp = cp >> 6; cp |= 0x4000000;
+    case 5: str[4] = 0x80 | (cp & 0x3f); cp = cp >> 6; cp |= 0x200000;
+    case 4: str[3] = 0x80 | (cp & 0x3f); cp = cp >> 6; cp |= 0x10000;
+    case 3: str[2] = 0x80 | (cp & 0x3f); cp = cp >> 6; cp |= 0x800;
+    case 2: str[1] = 0x80 | (cp & 0x3f); cp = cp >> 6; cp |= 0xc0;
+    case 1: str[0] = cp;
+    }
+    return str;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static std::vector< unsigned int > colors;
@@ -144,6 +166,7 @@ int imguiGetMouseCursor() {
 
 int (*imguiRenderTextLength)(const char* text) = 0;
 
+enum { IMGUI_KEYBOARD_KEYREPEAT = 160 }; // in frames
 static const unsigned TEXT_POOL_SIZE = 8000;
 static char g_textPool[TEXT_POOL_SIZE];
 static unsigned g_textPoolSize = 0;
@@ -278,7 +301,7 @@ struct GuiState : public coord
 {
         GuiState() :
                 left(false), leftPressed(false), leftReleased(false),
-                mx(-1), my(-1), scroll(0), ascii(0), lastAscii(0),
+                mx(-1), my(-1), scroll(0), codepoint(0), codepoint_last(0),
                 inputable(0), active(0), hot(0), hotToBe(0), isHot(false), isActive(false), wentActive(false),
                 dragX(0), dragY(0), dragOrig(0),
                 insideCurrentScroll(false),  areaId(0), widgetId(0)
@@ -289,8 +312,7 @@ struct GuiState : public coord
         bool leftPressed, leftReleased;
         int mx,my;
         int scroll;
-        char ascii;
-        char lastAscii;
+        unsigned codepoint, codepoint_last, codepoint_repeat;
         unsigned int inputable;
         unsigned int active;
         unsigned int hot;
@@ -461,7 +483,7 @@ static bool textInputLogic(unsigned int id, bool over){
     return res;
 }
 
-static void updateInput(int mx, int my, unsigned char mbut, int scroll, char asciiCode)
+static void updateInput(int mx, int my, unsigned char mbut, int scroll, unsigned codepoint)
 {
         bool left = (mbut & IMGUI_MBUT_LEFT) != 0;
 
@@ -473,20 +495,27 @@ static void updateInput(int mx, int my, unsigned char mbut, int scroll, char asc
 
         g_state.scroll = scroll;
 
-        if(asciiCode > 0x80) //only ascii code handled
-            asciiCode = 0;
-        g_state.lastAscii = g_state.ascii;
-        g_state.ascii = asciiCode;
+        if( g_state.codepoint_last != codepoint ) {
+            g_state.codepoint_repeat = 0;
+        } else {
+            g_state.codepoint_repeat++;
+            if( g_state.codepoint_repeat > IMGUI_KEYBOARD_KEYREPEAT + 1 ) {
+                g_state.codepoint_repeat = unsigned(g_state.codepoint_repeat * 0.80);
+            }
+        }
+
+        g_state.codepoint_last = g_state.codepoint;
+        g_state.codepoint = codepoint;
 }
 
-void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll, char asciiCode/*=0*/)
+void imguiBeginFrame(int mx, int my, unsigned char mbut, int scroll, unsigned codepoint)
 {
         imguiResetCaret();
         imguiResetMouse();
         imguiResetColors();
         imguiResetEnables();
 
-        updateInput(mx,my,mbut,scroll,asciiCode);
+        updateInput(mx,my,mbut,scroll,codepoint);
 
         g_state.hot = g_state.hotToBe;
         g_state.hotToBe = 0;
@@ -806,17 +835,14 @@ bool imguiCollapse(const char* text, const char* subtext, bool checked)
         bool res = buttonLogic(id, over);
 
         if (checked)
-                addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 2, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
+                addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 2, !enabled ? gray_alpha(128) : isActive(id) ? theme_alpha(256) : theme_alpha(192) );
         else
-                addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
+                addGfxCmdTriangle(cx, cy, CHECK_SIZE, CHECK_SIZE, 1, !enabled ? gray_alpha(128) : isActive(id) ? theme_alpha(256) : theme_alpha(192) );
 
-        if (enabled)
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) ? theme_alpha(256) : theme_alpha(192) );
-        else
-                addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
+        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, !enabled ? gray_alpha(192) : isHot(id) ? theme_alpha(256) : theme_alpha(192) );
 
         if (subtext)
-                addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, subtext, theme_alpha(128));
+                addGfxCmdText(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, subtext, enabled ? theme_alpha(128) : gray_alpha(128));
 
         return res;
 }
@@ -1062,7 +1088,25 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
         return is_res || has_changed;
 }
 
-bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
+std::string imguiTextConv( const std::vector<unsigned> &utf32 )
+{
+    std::string out;
+    for( auto &cp : utf32 ) {
+        out += cpToUTF8(cp);
+    }
+    return out;
+}
+
+std::vector<unsigned> imguiTextConv( const std::string &ascii )
+{
+    std::vector<unsigned> out;
+    for( auto &ch : ascii ) {
+        out.push_back( ch );
+    }
+    return out;
+}
+
+bool imguiTextInput( const char* text, std::vector<unsigned> &utf32 )
 {
     bool res = true;
     //--
@@ -1075,16 +1119,17 @@ bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
     unsigned int textLen = (unsigned int)( imguiTextLength( text ) );
     //--
     //Handle keyboard input if any
-    unsigned int L = strlen(buffer);
-    if( enabled ) {
-        if(isInputable(id) && g_state.ascii == 0x08 && g_state.ascii!=g_state.lastAscii)//backspace
-        {    if(L>0 && buffer[L-1]>8) buffer[L-1]=0; }
-        else if(isInputable(id) && g_state.ascii == 0x0D && g_state.ascii!=g_state.lastAscii)//enter
+    if( enabled && isInputable(id) ) {
+        if( g_state.codepoint == 0x0D ) {
+            //enter
             g_state.inputable = 0;
-        else if(isInputable(id) && L < bufferLength-1 && g_state.ascii!=0 && g_state.ascii!=g_state.lastAscii){
-            ++L;
-            buffer[L-1] = g_state.ascii;
-            buffer[L] = 0;
+        }
+        else if( g_state.codepoint == 0x08 && (g_state.codepoint_repeat == 1 || g_state.codepoint_repeat > IMGUI_KEYBOARD_KEYREPEAT) ) {
+            //backspace wip
+            if(utf32.size() && utf32.back()>8) utf32.pop_back();
+        } else if( g_state.codepoint!=0 && (g_state.codepoint_repeat == 1 || g_state.codepoint_repeat > IMGUI_KEYBOARD_KEYREPEAT) ){
+            //codepoint
+            utf32.push_back( g_state.codepoint );
         }
     }
     //--
@@ -1094,20 +1139,19 @@ bool imguiTextInput(const char* text, char* buffer, unsigned int bufferLength)
     int h = BUTTON_HEIGHT;
     bool over = inRect(x, y, w, h);
     res = textInputLogic(id, over);
+    std::string utf8 = imguiTextConv( utf32 );
     if( enabled ) {
-        char _buffer[32];
-        strcpy( _buffer, buffer );
-        if( isInputable(id) && caret ) { _buffer[L] = '|'; _buffer[L+1] = 0; }
+        if( caret && isInputable(id) ) utf8.push_back('|');
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, isInputable(id) ? theme_alpha(256):gray_alpha(96));
-        addGfxCmdText(x+7, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, _buffer, isInputable(id) ? black_alpha(256): white_alpha(256));
+        addGfxCmdText(x+7, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, utf8.c_str(), isInputable(id) ? black_alpha(256): white_alpha(256));
     } else {
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, gray_alpha(64));
-        addGfxCmdText(x+7, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, buffer, white_alpha(128));
+        addGfxCmdText(x+7, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, utf8.c_str(), white_alpha(128));
     }
     //--
     g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
     g_state.push();
-    return res;
+    return res | (g_state.codepoint == 0x0D ) ;
 }
 
 void imguiPair(const char* text, const char *value)  // @rlyeh: new widget
@@ -1456,19 +1500,19 @@ unsigned int imguiRGBA(unsigned char r, unsigned char g, unsigned char b, unsign
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 int imguiShowDialog( const char *text, int *answer ) {
-    bool clicked = false;
+    int clicked = 0;
 
     imguiLabel( text );
     imguiSpaceDiv();
         if( imguiButton("yes") ) {
-            clicked = true;
-            *answer = true;
+            clicked = 1;
+            *answer = 1;
         }
         int pos = imguiStackSet(-1);
             imguiSpaceShift();
                 if( imguiButton("no") ) {
-                    clicked = true;
-                    *answer = false;
+                    clicked = 1;
+                    *answer = 0;
                 }
             imguiSpaceUnshift();
         imguiStackSet(pos);

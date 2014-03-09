@@ -52,12 +52,14 @@ int main( int argc, char **argv )
     }
 
     // Open a window and create its OpenGL context
-$apple( $GL3(
+$GL3(
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+)
+$apple(
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-) )
+)
     GLFWmonitor *monitor = 0; /* 0 for windowed, glfwGetPrimaryMonitor() for primary monitor, etc */
     GLFWwindow *shared = 0;
     GLFWwindow* window = glfwCreateWindow(width, height, "imgui sample", monitor, shared);
@@ -70,9 +72,9 @@ $apple( $GL3(
 
     glfwMakeContextCurrent(window);
 
-$apple( $GL3(
+$GL3(
     glewExperimental = GL_TRUE;
-) )
+)
     GLenum err = glewInit();
     if (GLEW_OK != err)
     {
@@ -120,6 +122,7 @@ $apple( $GL3(
     float value4A = 33.f, value4B = 66.f;
     int scrollarea1 = 0;
     int scrollarea2 = 0;
+    int scrollarea3 = 0;
 
     // glfw scrolling
     int glfwscroll = 0;
@@ -131,7 +134,8 @@ $apple( $GL3(
     sprintf(input, "type here");
 
     // main loop
-    while( !glfwWindowShouldClose(window) )
+    bool running = true;
+    while( running && !glfwWindowShouldClose(window) )
     {
         glfwGetFramebufferSize(window, &width, &height);
         if( width * height <= 1 ) {
@@ -225,7 +229,12 @@ $GL2(
         imguiUnindent();
         imguiLabel("Unindented");
 
-        //imguiTextInput("Text input", input, 15);
+        {
+            static std::vector<unsigned> input = imguiTextConv("type here");
+            if( imguiTextInput("unicode input", input ) ) {
+                // input finished
+            }
+        }
 
         imguiPair( "hello", "pair" );
 
@@ -262,9 +271,16 @@ $GL2(
             imguiLabel("A wall of text");
 
         imguiEndScrollArea();
+
+        imguiBeginScrollArea("dialog", 20 + width / 5, 200, width / 5, height - 510, &scrollarea3);
+            int answer = 0;
+            if( imguiShowDialog("exit app?", &answer) ) {
+                if( answer ) running = false;
+            }
+        imguiEndScrollArea();
+
         imguiEndFrame();
 
-#if 0
         imguiDrawText(30 + width / 5 * 2, height - 20, IMGUI_ALIGN_LEFT, "Free text",  imguiRGBA(32,192, 32,192));
         imguiDrawText(30 + width / 5 * 2 + 100, height - 40, IMGUI_ALIGN_RIGHT, "Free text",  imguiRGBA(32, 32, 192, 192));
         imguiDrawText(30 + width / 5 * 2 + 50, height - 60, IMGUI_ALIGN_CENTER, "Free text",  imguiRGBA(192, 32, 32,192));
@@ -280,7 +296,6 @@ $GL2(
         imguiDrawRect(30 + width / 5 * 2, height - 590, 100, 100, imguiRGBA(32, 192, 32, 192));
         imguiDrawRect(30 + width / 5 * 2, height - 710, 100, 100, imguiRGBA(32, 32, 192, 192));
         imguiDrawRect(30 + width / 5 * 2, height - 830, 100, 100, imguiRGBA(192, 32, 32,192));
-#endif
 
         imguiRenderGLDraw(width, height);
 
