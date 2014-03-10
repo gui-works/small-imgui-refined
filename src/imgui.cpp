@@ -28,6 +28,7 @@
 #include <cmath>
 #include <vector>
 #include "imgui.hpp"
+#include <iostream>
 
 #ifdef _MSC_VER
 #   pragma warning(push)
@@ -968,14 +969,48 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
         if (u1 > 1) u1 = 1;
         int m1 = (int)(u1 * range);
 
-// button
-
-        addGfxCmdRoundedRect((float)x + m0, (float)y, (float)m1 - m0 + SLIDER_MARKER_WIDTH, (float)h, 4.0f, enabled ? theme_alpha(64) : gray_alpha(64) );
-        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
+// common
 
         bool is_highlighted = false;
         bool is_res = false;
         bool has_changed = false;
+
+// draggable bar
+{
+        g_state.widgetId++;
+        unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+        bool over = enabled && inRect(x+m0, y, m1 - m0 + SLIDER_MARKER_WIDTH, h, true);
+        bool res = buttonLogic(id, over);
+        bool valChanged = false;
+
+        if (isActive(id))
+        {
+                if (g_state.wentActive)
+                {
+                        g_state.dragX = g_state.mx;
+                        g_state.dragOrig = u0;
+                }
+                if (g_state.dragX != g_state.mx)
+                {
+                        float u = u0;
+                        float *val = val0;
+                        float diff = *val1 - *val0;
+
+                        u = g_state.dragOrig + (float)(g_state.mx - g_state.dragX) / (float)range;
+                        if (u < 0) u = 0;
+                        if (u > 1) u = 1;
+                        *val = vmin + u*(vmax-vmin);
+                        *val = floorf(*val/vinc+0.5f)*vinc; // Snap to vinc
+                        *val1 = *val + diff;
+                        //m = (int)(u * range);
+                        has_changed = true;
+                }
+        }
+
+        addGfxCmdRoundedRect((float)x + m0, (float)y, (float)m1 - m0 + SLIDER_MARKER_WIDTH, (float)h, 4.0f, enabled ? theme_alpha(64) : gray_alpha(64) );
+        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
+}
 
 // slide #0
 {
@@ -1445,6 +1480,12 @@ void imguiDrawText(int x, int y, imguiTextAlign align, const char* text, unsigne
 void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int color)
 {
         addGfxCmdLine(x0, y0, x1, y1, r, color);
+}
+
+void imguiDrawLines( const std::vector< std::pair<float,float> > &points, float r, unsigned int color) {
+        for( int i = 0; i < points.size() - 1; ++i ) {
+             imguiDrawLine(points[i].first, points[i].second, points[i+1].first, points[i+1].second, r, color);
+        }
 }
 
 void imguiDrawRect(float x, float y, float w, float h, unsigned int color)

@@ -26,6 +26,7 @@
 
 #include <string>
 #include <vector>
+#include <utility>
 
 enum imguiMouseButton
 {
@@ -97,6 +98,7 @@ bool imguiBitmask(const char* text, unsigned* mask, int bits);
 // rendering
 void imguiDrawText(int x, int y, imguiTextAlign align, const char* text, unsigned int color);
 void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int color);
+void imguiDrawLines( const std::vector< std::pair<float,float> > &points, float r, unsigned int color);
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color);
 void imguiDrawRect(float x, float y, float w, float h, unsigned int color);
 
