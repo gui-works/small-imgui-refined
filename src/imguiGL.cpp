@@ -98,7 +98,7 @@ inline unsigned int RGBA(unsigned char r, unsigned char g, unsigned char b, unsi
 	return (r) | (g << 8) | (b << 16) | (a << 24);
 }
 
-static void drawPolygon(const float* coords, unsigned numCoords, float r, unsigned int col)
+static void drawPolygon(const float* coords, unsigned numCoords, float r, unsigned int col, bool grad = true )
 {
 	if (numCoords > TEMP_COORD_COUNT) numCoords = TEMP_COORD_COUNT;
 
@@ -144,9 +144,9 @@ $GL3(
 	}
 
 $GL3(
-	int vSize = numCoords * 12 + (numCoords - 2) * 6;
-	int uvSize = numCoords * 2 * 6 + (numCoords - 2) * 2 * 3;
-	int cSize = numCoords * 4 * 6 + (numCoords - 2) * 4 * 3;
+	int vSize  = ( grad ? numCoords * 12 : 0 ) + (numCoords - 2) * 6;
+	int uvSize = ( grad ? numCoords * 2 * 6 : 0 ) + (numCoords - 2) * 2 * 3;
+	int cSize  = ( grad ? numCoords * 4 * 6 : 0 ) + (numCoords - 2) * 4 * 3;
 	float * v = g_tempVertices;
 	float * uv = g_tempTextureCoords;
 	memset(uv, 0, uvSize * sizeof(float));
@@ -159,10 +159,11 @@ $GL3(
 $GL2(
 	unsigned int colTrans = RGBA(col&0xff, (col>>8)&0xff, (col>>16)&0xff, 0);
 
-	glBegin(GL_TRIANGLES);
+	glBegin(grad ? GL_TRIANGLES : GL_TRIANGLE_STRIP);
 
 	glColor4ubv((GLubyte*)&col);
 )
+	if( grad )
 	for (unsigned i = 0, j = numCoords-1; i < numCoords; j=i++)
 	{
 $GL3(
@@ -224,7 +225,6 @@ $GL2(
 
 		glVertex2fv(&g_tempCoords[j*2]);
 		glVertex2fv(&g_tempCoords[i*2]);
-
 		glColor4ubv((GLubyte*)&col);
 		glVertex2fv(&coords[i*2]);
 )
@@ -262,7 +262,11 @@ $GL3(
 		ptrC += 4;
 )
 $GL2(
+		if( grad )
 		glVertex2fv(&coords[0]);
+		else
+		glVertex2fv(&coords[(i-2)*2]);
+
 		glVertex2fv(&coords[(i-1)*2]);
 		glVertex2fv(&coords[i*2]);
 )
@@ -294,6 +298,42 @@ static void drawRect(float x, float y, float w, float h, float fth, unsigned int
 	};
 	drawPolygon(verts, 4, fth, col);
 }
+
+static void drawArc(float x, float y, float radius, float from, float to, float fth, unsigned int col)
+{
+    int steps = 20; //# of triangles used to draw circle
+
+    GLfloat twicePi = 2.0f * M_PI;
+
+	const unsigned n = ( to - from ) * (CIRCLE_VERTS);
+	const float* cverts = g_circleVerts;
+
+    float outer = radius;
+    float inner = radius - fth * 2;
+    float i = from;
+
+    std::vector<float> verts;
+
+    i = from;
+
+    float inc = ( to - from ) / n;
+    if( 1 ) {
+	    for( float i = from; i < to; i += inc ) {
+			verts.push_back( x + (outer * sin(i * twicePi)) );
+			verts.push_back( y + (outer * cos(i * twicePi)) );
+			verts.push_back( x + (inner * sin(i * twicePi)) );
+			verts.push_back( y + (inner * cos(i * twicePi)) );
+		}
+
+		verts.push_back( x + (outer * sin(to * twicePi)) );
+		verts.push_back( y + (outer * cos(to * twicePi)) );
+		verts.push_back( x + (inner * sin(to * twicePi)) );
+		verts.push_back( y + (inner * cos(to * twicePi)) );
+    }
+
+	drawPolygon(verts.data(), verts.size() / 2, fth, col, false);
+}
+
 
 /*
 static void drawEllipse(float x, float y, float w, float h, float fth, unsigned int col)
@@ -586,6 +626,9 @@ static void getBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_ind
 }
 
 static void drawText(float x, float y, const char *ftext, int align, unsigned int col) {
+/*$GL3(
+	glUseProgram(0);
+	)*/
 	if( setText(ftext[0]) ) {
 		fonsSetColor(fs, col);
 		fonsSetAlign(fs, align );
@@ -597,6 +640,10 @@ static void drawText(float x, float y, const char *ftext, int align, unsigned in
 		fonsSetAlign(fs, align );
 		fonsDrawText(fs, x,y, &ftext[0], NULL);
 	}
+/*$GL3(
+	glUseProgram(g_program);
+	)
+	*/
 }
 
 void imguiRenderGLDraw(int width, int height)
@@ -674,6 +721,10 @@ $GL3(
 			{
 				glDisable(GL_SCISSOR_TEST);
 			}
+		}
+		else if (cmd.type == IMGUI_GFXCMD_ARC)
+		{
+			drawArc( cmd.arc.x, cmd.arc.y, cmd.arc.r, cmd.arc.t0, cmd.arc.t1, 5.0f, cmd.col );
 		}
 	}
 	glDisable(GL_SCISSOR_TEST);

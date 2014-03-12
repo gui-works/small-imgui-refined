@@ -90,6 +90,7 @@ bool imguiRadio(const char* text, size_t n_options, const char** options, int &c
 void imguiPair(const char *text, const char *value);
 void imguiProgressBar(const char* text, float val, bool show_decimals = false);
 bool imguiBitmask(const char* text, unsigned* mask, int bits);
+bool imguiRotatorySlider(const char *text, float *val, float vmin, float vmax, float vinc, const char *format = "%d");
 
 //bool imguiLink();
 //      bool imguiImage();
@@ -101,6 +102,8 @@ void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int
 void imguiDrawLines( const std::vector< std::pair<float,float> > &points, float r, unsigned int color);
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color);
 void imguiDrawRect(float x, float y, float w, float h, unsigned int color);
+void imguiDrawArc(float x, float y, float radius, float from, float to, unsigned int color);
+void imguiDrawCircle(float x, float y, float radius, unsigned int color );
 
 // text
 int imguiTextLength(const char *text);
@@ -138,6 +141,7 @@ enum imguiGfxCmdType
         IMGUI_GFXCMD_LINE,
         IMGUI_GFXCMD_TEXT,
         IMGUI_GFXCMD_SCISSOR,
+        IMGUI_GFXCMD_ARC
 };
 
 struct imguiGfxRect
@@ -156,6 +160,12 @@ struct imguiGfxLine
         short x0,y0,x1,y1,r;
 };
 
+struct imguiGfxArc
+{
+        short x,y;
+        float r,t0,t1;
+};
+
 struct imguiGfxCmd
 {
         char type;
@@ -167,6 +177,7 @@ struct imguiGfxCmd
                 imguiGfxLine line;
                 imguiGfxRect rect;
                 imguiGfxText text;
+                imguiGfxArc  arc;
         };
 };
 

@@ -289,6 +289,26 @@ static void addGfxCmdText(int x, int y, int align, const char* text, unsigned in
         cmd.text.text = allocText(text);
 }
 
+static void addGfxCmdArc(float x, float y, float r, float t0, float t1, unsigned int color)
+{
+        if (g_gfxCmdQueueSize >= GFXCMD_QUEUE_SIZE)
+                return;
+        imguiGfxCmd& cmd = g_gfxCmdQueue[g_gfxCmdQueueSize++];
+
+        float vinc = 0.05f;
+        t0 = floorf(t0/vinc+0.5f)*vinc; // Snap to vinc
+        t1 = floorf(t1/vinc+0.5f)*vinc; // Snap to vinc
+
+        cmd.type = IMGUI_GFXCMD_ARC;
+        cmd.flags = 0;      // on/off flag.
+        cmd.col = color;
+        cmd.arc.x = (short)x;
+        cmd.arc.y = (short)y;
+        cmd.arc.r = r;
+        cmd.arc.t0 = t0;
+        cmd.arc.t1 = t1;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 struct coord {
         int widgetX, widgetY, widgetW;
@@ -941,6 +961,87 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         return res || valChanged;
 }
 
+enum { ROTATORY_MARKER_WIDTH = 30 };
+enum { ROTATORY_MARKER_HEIGHT = 30 };
+
+bool imguiRotatorySlider(const char* text, float* val, float vmin, float vmax, float vinc, const char *format)
+{
+        g_state.widgetId++;
+        unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+        int x = g_state.widgetX;
+        int y = g_state.widgetY - BUTTON_HEIGHT - ROTATORY_MARKER_HEIGHT/2;
+        int w = ROTATORY_MARKER_WIDTH;
+        int h = ROTATORY_MARKER_HEIGHT;
+        g_state.widgetY -= h + DEFAULT_SPACING;
+        g_state.push();
+
+//        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
+
+        const int range = w - ROTATORY_MARKER_WIDTH;
+
+        float u = (*val - vmin) / (vmax-vmin);
+        if (u < 0) u = 0;
+        if (u > 1) u = 1;
+        int m = (int)(ROTATORY_MARKER_WIDTH);
+
+        bool over = enabled && inRect(x, y, w, h, true);
+        bool res = buttonLogic(id, over);
+        bool valChanged = false;
+
+        if (isActive(id))
+        {
+                if (g_state.wentActive)
+                {
+                        g_state.dragX = g_state.mx;
+                        g_state.dragOrig = u;
+                }
+                if (g_state.dragX != g_state.mx)
+                {
+                        u = g_state.dragOrig + (float)(g_state.mx - g_state.dragX) / (float)range;
+                        if (u < 0) u = 0;
+                        if (u > 1) u = 1;
+                        *val = vmin + u*(vmax-vmin);
+                        *val = floorf(*val/vinc+0.5f)*vinc; // Snap to vinc
+                        m = (int)(u * range);
+                        valChanged = true;
+                }
+        }
+
+        // TODO: fix this, take a look at 'nicenum'.
+        int digits = (int)(std::ceilf(std::log10f(vinc)));
+        char msg[128];
+        const char *replaced = replace_str( format, "%d", "%.*f" );
+        sprintf(msg, replaced ? replaced : "%.*f", digits >= 0 ? 0 : -digits, *val);
+        if( replaced ) {
+            free( (void *)replaced );
+        }
+
+        if (enabled)
+        {
+                unsigned int col = isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192);
+
+                //addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, col ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+w/2, y+h/2, IMGUI_ALIGN_CENTER|IMGUI_ALIGN_MIDDLE, msg, col ); // @rlyeh: fix blinking colours
+
+                imguiDrawArc(float(x) + ROTATORY_MARKER_WIDTH/2, float(y) + ROTATORY_MARKER_WIDTH/2, ROTATORY_MARKER_WIDTH/2, 0.00f, u, col );
+                imguiDrawArc(float(x) + ROTATORY_MARKER_WIDTH/2, float(y) + ROTATORY_MARKER_WIDTH/2, ROTATORY_MARKER_WIDTH/2, u, 1.00f, gray_alpha(192) );
+        }
+        else
+        {
+                unsigned int col = gray_alpha(192);
+
+                //addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, col );
+                addGfxCmdText(x+w/2, y+h/2, IMGUI_ALIGN_CENTER|IMGUI_ALIGN_MIDDLE, msg, col );
+
+                imguiDrawArc(float(x) + ROTATORY_MARKER_WIDTH/2, float(y) + ROTATORY_MARKER_WIDTH/2, ROTATORY_MARKER_WIDTH/2, 0.00f, u, col );
+                imguiDrawArc(float(x) + ROTATORY_MARKER_WIDTH/2, float(y) + ROTATORY_MARKER_WIDTH/2, ROTATORY_MARKER_WIDTH/2, u, 1.00f, gray_alpha(192) );
+        }
+
+        return res || valChanged;
+}
+
+
 bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vmax, float vinc, const char *format)
 {
         int x = g_state.widgetX;
@@ -1491,6 +1592,16 @@ void imguiDrawLines( const std::vector< std::pair<float,float> > &points, float 
 void imguiDrawRect(float x, float y, float w, float h, unsigned int color)
 {
         addGfxCmdRect(x, y, w, h, color);
+}
+
+void imguiDrawArc(float x, float y, float radius, float from, float to, unsigned int color )
+{
+        addGfxCmdArc(x, y, radius, from, to, color);
+}
+
+void imguiDrawCircle(float x, float y, float radius, unsigned int color)
+{
+        addGfxCmdArc(x, y, radius, 0, 1, color);
 }
 
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color)
