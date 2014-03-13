@@ -301,15 +301,13 @@ static void drawRect(float x, float y, float w, float h, float fth, unsigned int
 
 static void drawArc(float x, float y, float radius, float from, float to, float fth, unsigned int col)
 {
-    int steps = 20; //# of triangles used to draw circle
-
     GLfloat twicePi = 2.0f * M_PI;
 
-	const unsigned n = ( to - from ) * (CIRCLE_VERTS);
+	const unsigned n = /* ( to - from ) * */ unsigned(1.5 * CIRCLE_VERTS);
 	const float* cverts = g_circleVerts;
 
     float outer = radius;
-    float inner = radius - fth * 2;
+    float inner = radius - fth;
     float i = from;
 
     std::vector<float> verts;
@@ -317,19 +315,17 @@ static void drawArc(float x, float y, float radius, float from, float to, float 
     i = from;
 
     float inc = ( to - from ) / n;
-    if( 1 ) {
-	    for( float i = from; i < to; i += inc ) {
-			verts.push_back( x + (outer * sin(i * twicePi)) );
-			verts.push_back( y + (outer * cos(i * twicePi)) );
-			verts.push_back( x + (inner * sin(i * twicePi)) );
-			verts.push_back( y + (inner * cos(i * twicePi)) );
-		}
+    for( float i = from; i < to; i += inc ) {
+		verts.push_back( x + (outer * sin(i * twicePi)) );
+		verts.push_back( y + (outer * cos(i * twicePi)) );
+		verts.push_back( x + (inner * sin(i * twicePi)) );
+		verts.push_back( y + (inner * cos(i * twicePi)) );
+	}
 
-		verts.push_back( x + (outer * sin(to * twicePi)) );
-		verts.push_back( y + (outer * cos(to * twicePi)) );
-		verts.push_back( x + (inner * sin(to * twicePi)) );
-		verts.push_back( y + (inner * cos(to * twicePi)) );
-    }
+	verts.push_back( x + (outer * sin(to * twicePi)) );
+	verts.push_back( y + (outer * cos(to * twicePi)) );
+	verts.push_back( x + (inner * sin(to * twicePi)) );
+	verts.push_back( y + (inner * cos(to * twicePi)) );
 
 	drawPolygon(verts.data(), verts.size() / 2, fth, col, false);
 }
@@ -724,7 +720,7 @@ $GL3(
 		}
 		else if (cmd.type == IMGUI_GFXCMD_ARC)
 		{
-			drawArc( cmd.arc.x, cmd.arc.y, cmd.arc.r, cmd.arc.t0, cmd.arc.t1, 5.0f, cmd.col );
+			drawArc( cmd.arc.x, cmd.arc.y, cmd.arc.r, cmd.arc.t0, cmd.arc.t1, cmd.arc.w, cmd.col );
 		}
 	}
 	glDisable(GL_SCISSOR_TEST);

@@ -28,6 +28,13 @@
 #include <vector>
 #include <utility>
 
+enum imguiIntersection
+{
+        IMGUI_SECTION_INSIDE = -1,
+        IMGUI_SECTION_BORDER = 0,
+        IMGUI_SECTION_OUTSIDE = 1
+};
+
 enum imguiMouseButton
 {
         IMGUI_MBUT_LEFT = 0x01,
@@ -91,6 +98,7 @@ void imguiPair(const char *text, const char *value);
 void imguiProgressBar(const char* text, float val, bool show_decimals = false);
 bool imguiBitmask(const char* text, unsigned* mask, int bits);
 bool imguiRotatorySlider(const char *text, float *val, float vmin, float vmax, float vinc, const char *format = "%d");
+bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, float vmax, float vinc, float *valLO, float *valHI, const char *format = "%d - %d");
 
 //bool imguiLink();
 //      bool imguiImage();
@@ -103,7 +111,7 @@ void imguiDrawLines( const std::vector< std::pair<float,float> > &points, float 
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color);
 void imguiDrawRect(float x, float y, float w, float h, unsigned int color);
 void imguiDrawArc(float x, float y, float radius, float from, float to, unsigned int color);
-void imguiDrawCircle(float x, float y, float radius, unsigned int color );
+void imguiDrawCircle(float x, float y, float radius, unsigned int color);
 
 // text
 int imguiTextLength(const char *text);
@@ -132,6 +140,9 @@ enum {
         IMGUI_MOUSE_HAND = 2
 };
 int imguiGetMouseCursor();
+
+// tweens
+void imguiTween( int mode );
 
 // Pull render interface.
 enum imguiGfxCmdType
@@ -163,7 +174,7 @@ struct imguiGfxLine
 struct imguiGfxArc
 {
         short x,y;
-        float r,t0,t1;
+        float r,t0,t1,w;
 };
 
 struct imguiGfxCmd
@@ -183,6 +194,5 @@ struct imguiGfxCmd
 
 const imguiGfxCmd* imguiGetRenderQueue();
 int imguiGetRenderQueueSize();
-
 
 #endif // IMGUI_HPP

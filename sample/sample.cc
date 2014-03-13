@@ -40,6 +40,18 @@ void GetControlKEY(GLFWwindow *window, int glfw_key, int sys_scancode, int glfw_
         KeyUNICODE = 0;
 }
 
+double wheelx = 0, wheely = 0;
+
+void scroll_callback(GLFWwindow *win, double xoff, double yoff ) {
+    wheelx = xoff;
+    wheely = yoff;
+}
+
+void scroll_reset() {
+    wheelx = 0;
+    wheely = 0;
+}
+
 int main( int argc, char **argv )
 {
     int width = 1024, height=640;
@@ -83,6 +95,9 @@ $GL3(
           exit( EXIT_FAILURE );
     }
 
+    // Ensure we can capture the mouse wheel
+    glfwSetScrollCallback( window, scroll_callback );
+
     // Ensure we can capture the escape key being pressed below
     glfwSetInputMode( window, GLFW_STICKY_KEYS, GL_TRUE );
 
@@ -124,9 +139,6 @@ $GL3(
     int scrollarea2 = 0;
     int scrollarea3 = 0;
 
-    // glfw scrolling
-    int glfwscroll = 0;
-
     //glfw callback
     glfwSetCharCallback(window, GetUNICODE);
     glfwSetKeyCallback(window, GetControlKEY);
@@ -149,13 +161,10 @@ $GL3(
 
         // Mouse states
         unsigned char mousebutton = 0;
-        int currentglfwscroll = 0; //glfwGetMouseWheel();
-        int mscroll = 0;
-        if (currentglfwscroll < glfwscroll)
-            mscroll = 2;
-         if (currentglfwscroll > glfwscroll)
-            mscroll = -2;
-        glfwscroll = currentglfwscroll;
+
+        int mscroll = -wheely;
+        scroll_reset();
+
         double mousex; double mousey;
         glfwGetCursorPos(window, &mousex, &mousey);
         mousey = height - mousey;
@@ -215,9 +224,14 @@ $GL2(
         imguiPopColor();
 
         imguiSlider("Slider", &value1, 0.f, 100.f, 1.f);
-				imguiPushEnable( false );
-				imguiSlider("Disabled slider", &value2, 0.f, 100.f, 1.f);
-				imguiPopEnable();
+                imguiPushEnable( false );
+                imguiSlider("Disabled slider", &value2, 0.f, 100.f, 1.f);
+                imguiPopEnable();
+
+        imguiRotatorySlider("", &value1, 0.f, 100.f, 1.f);
+                imguiPushEnable( false );
+                imguiRotatorySlider("", &value1, 0.f, 100.f, 1.f);
+                imguiPopEnable();
 
         imguiRange("Range", &value3A, &value3B, 0.f, 100.f, 1.f);
 				imguiPushEnable(false);
