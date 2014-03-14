@@ -103,8 +103,8 @@ enum { ROTATORY_AREA_HEIGHT = 30 };
 enum { ROTATORY_RING_WIDTH = 4 };
 
 enum { BUTTON_HEIGHT = 20 };
-enum { SLIDER_HEIGHT = 20 };
 enum { SLIDER_MARKER_WIDTH = 10 };
+enum { SLIDER_MARKER_HEIGHT = 20 };
 enum { CHECK_SIZE = 8 };
 enum { DEFAULT_SPACING = 4 };
 enum { TEXT_HEIGHT = 8 };
@@ -165,6 +165,17 @@ void imguiPopEnable() {
 static int frame = 0, caret = 0;
 static void imguiResetCaret() {
     caret = ( ( ( ++frame %= 60 ) / (60/(3*2)) ) % 2 ); // 60hz/20 = ~3 per sec, then blink %2
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+static int g_tween = 0;
+void imguiTween( int mode ) {
+    g_tween = mode;
+}
+
+namespace sand {
+    float tween( int mode, float dt01 );
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -911,8 +922,8 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         int x = g_state.widgetX;
         int y = g_state.widgetY - BUTTON_HEIGHT;
         int w = g_state.widgetW;
-        int h = SLIDER_HEIGHT;
-        g_state.widgetY -= SLIDER_HEIGHT + DEFAULT_SPACING;
+        int h = SLIDER_MARKER_HEIGHT;
+        g_state.widgetY -= SLIDER_MARKER_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
@@ -924,7 +935,7 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         if (u > 1) u = 1;
         int m = (int)(u * range);
 
-        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_HEIGHT, true);
+        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true);
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -952,7 +963,7 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
             if (isActive(id)) col = theme_alpha(256);
             else col = isHot(id) ? theme_alpha(128) : theme_alpha(64);
         }
-        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, col );
+        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT, 4.0f, col );
 
         // TODO: fix this, take a look at 'nicenum'.
         int digits = (int)(std::ceilf(std::log10f(vinc)));
@@ -965,13 +976,13 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
 
         if (enabled)
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+w-SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, isHot(id) | isActive(id) ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
         }
         else
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, gray_alpha(192) );
+                addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
+                addGfxCmdText(x+w-SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, gray_alpha(192) );
         }
 
         return res || valChanged;
@@ -1076,7 +1087,7 @@ bool imguiRotatorySlider(const char* text, float* val, float vmin, float vmax, f
                 imguiDrawArc(float(x) + ROTATORY_AREA_WIDTH/2, float(y) + ROTATORY_AREA_WIDTH/2, ROTATORY_AREA_WIDTH/2, 0.00f, u, col );
                 imguiDrawArc(float(x) + ROTATORY_AREA_WIDTH/2, float(y) + ROTATORY_AREA_WIDTH/2, ROTATORY_AREA_WIDTH/2, u, 1.00f, theme_alpha(64) );
 
-                //addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, col ); // @rlyeh: fix blinking colours
+                //addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, col ); // @rlyeh: fix blinking colours
                 addGfxCmdText(x+w/2, y+h/2, IMGUI_ALIGN_CENTER|IMGUI_ALIGN_MIDDLE, msg, col ); // @rlyeh: fix blinking colours
         }
         else
@@ -1086,7 +1097,7 @@ bool imguiRotatorySlider(const char* text, float* val, float vmin, float vmax, f
                 imguiDrawArc(float(x) + ROTATORY_AREA_WIDTH/2, float(y) + ROTATORY_AREA_WIDTH/2, ROTATORY_AREA_WIDTH/2, 0.00f, u, col );
                 imguiDrawArc(float(x) + ROTATORY_AREA_WIDTH/2, float(y) + ROTATORY_AREA_WIDTH/2, ROTATORY_AREA_WIDTH/2, u, 1.00f, gray_alpha(96) );
 
-                //addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, col );
+                //addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, col );
                 addGfxCmdText(x+w/2, y+h/2, IMGUI_ALIGN_CENTER|IMGUI_ALIGN_MIDDLE, msg, col );
         }
 
@@ -1152,8 +1163,10 @@ bool imguiXYSlider(const char* text, float* valX, float* valY, float height, flo
         imguiDrawLine( x+w/2, y, x+w/2, y+h, 2, fg );
         imguiDrawLine( x, y+h/2, x+w, y+h/2, 2, fg );
 
-        imguiDrawLine( mx, y, mx, y+h, 2, bg );
-        imguiDrawLine( x, my, x+w, my, 2, bg );
+        if( over && enabled ) {
+            imguiDrawLine( mx, y, mx, y+h, 2, bg );
+            imguiDrawLine( x, my, x+w, my, 2, bg );
+        }
 
         addGfxCmdText(x+w/2, y+h/2, IMGUI_ALIGN_CENTER|IMGUI_ALIGN_BOTTOM, msg, fg );
         addGfxCmdText(x+w/2, y+h/2, IMGUI_ALIGN_CENTER|IMGUI_ALIGN_TOP, mmsg, bg );
@@ -1169,8 +1182,8 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
         int x = g_state.widgetX;
         int y = g_state.widgetY - BUTTON_HEIGHT;
         int w = g_state.widgetW;
-        int h = SLIDER_HEIGHT;
-        g_state.widgetY -= SLIDER_HEIGHT + DEFAULT_SPACING;
+        int h = SLIDER_MARKER_HEIGHT;
+        g_state.widgetY -= SLIDER_MARKER_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
 // dims
@@ -1246,7 +1259,7 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_HEIGHT, true);
+        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true);
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1274,7 +1287,7 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
             if (isActive(id)) col = theme_alpha(256);
             else col = isHot(id) ? theme_alpha(128) : theme_alpha(64);
         }
-        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, col );
+        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT, 4.0f, col );
 
         is_highlighted |= ( isHot(id) | isActive(id) );
         is_res |= res;
@@ -1289,7 +1302,7 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_HEIGHT, true);
+        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true);
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1317,7 +1330,7 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
             if (isActive(id)) col = theme_alpha(256);
             else col = isHot(id) ? theme_alpha(128) : theme_alpha(64);
         }
-        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, col );
+        addGfxCmdRoundedRect((float)(x+m), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT, 4.0f, col );
 
         is_highlighted |= ( isHot(id) | isActive(id) );
         is_res |= res;
@@ -1337,40 +1350,32 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
 
         if (enabled)
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+w-SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
         }
         else
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, gray_alpha(192) );
+                addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
+                addGfxCmdText(x+w-SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, gray_alpha(192) );
         }
 
         return is_res || has_changed;
 }
 
-static int g_tween = 0;
-void imguiTween( int mode ) {
-    g_tween = mode;
-}
 
-namespace sand {
-    float tween( int mode, float dt01 );
-}
-
-bool imguiVerticalKnot(const char* text, float* val, float vmin, float vmax, float vinc, const char *format)
+bool imguiSliderMarker(const char* text, float* val, float vmin, float vmax, float vinc, const char *format)
 {
         int x = g_state.widgetX;
-        int y = g_state.widgetY - SLIDER_HEIGHT;
+        int y = g_state.widgetY - SLIDER_MARKER_HEIGHT;
         int w = SLIDER_MARKER_WIDTH;
-        int h = SLIDER_HEIGHT;
+        int h = SLIDER_MARKER_HEIGHT;
         g_state.widgetX += w;
         g_state.widgetW -= w;
         g_state.push();
         g_state.widgetX -= w;
         g_state.widgetW += w;
         g_state.push();
-        g_state.widgetY -= SLIDER_HEIGHT + DEFAULT_SPACING;
+        g_state.widgetY -= SLIDER_MARKER_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
         if(  vmin >  vmax ) { float swap = vmin;   vmin = vmax;   vmax = swap; }
@@ -1388,7 +1393,7 @@ bool imguiVerticalKnot(const char* text, float* val, float vmin, float vmax, flo
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_HEIGHT, true);
+        bool over = enabled && inRect(x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true);
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1403,8 +1408,8 @@ bool imguiVerticalKnot(const char* text, float* val, float vmin, float vmax, flo
             col = gray_alpha(64);
         }
 
-        addGfxCmdRoundedRect((float)(x), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT, 4.0f, theme_alpha(64) );
-        addGfxCmdRect((float)(x), (float)y+SLIDER_HEIGHT*u, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_HEIGHT * vinc, col );
+        addGfxCmdRoundedRect((float)(x), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT, 4.0f, theme_alpha(64) );
+        addGfxCmdRect((float)(x), (float)y+SLIDER_MARKER_HEIGHT*u, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT * vinc, col );
 
         is_highlighted |= ( isHot(id) | isActive(id) );
         is_res |= res;
@@ -1419,14 +1424,14 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         int x = g_state.widgetX;
         int y = g_state.widgetY - BUTTON_HEIGHT;
         int w = g_state.widgetW;
-        int h = SLIDER_HEIGHT;
+        int h = SLIDER_MARKER_HEIGHT;
         g_state.widgetX += w;
         g_state.widgetW -= w;
         g_state.push();
         g_state.widgetX -= w;
         g_state.widgetW += w;
         g_state.push();
-        g_state.widgetY -= SLIDER_HEIGHT + DEFAULT_SPACING;
+        g_state.widgetY -= SLIDER_MARKER_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
 // dims
@@ -1492,6 +1497,24 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
 
         addGfxCmdRoundedRect((float)x + m0, (float)y, (float)m1 - m0 + SLIDER_MARKER_WIDTH, (float)h, 4.0f, col );
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
+
+#if 0
+        m0 += SLIDER_MARKER_WIDTH;
+        m1 -= 0;
+        std::vector< float > points( 16*2 );
+        for( int i = 0, j = 16; i < j; ++i ) {
+            float ldt01 = i / float(j-1);
+            float tdt01 = sand::tween( g_tween, ldt01 );
+            float tdt10 = 1 - tdt01;
+            float &px = points[i*2+0];
+            float &py = points[i*2+1];
+            px = x+m0+(m1-m0)*(ldt01);
+            py = y+h*((*valLO)+(*valHI-*valLO)*(tdt01));
+        }
+        m1 += 0;
+        m0 -= SLIDER_MARKER_WIDTH;
+        imguiDrawLines( points, 2, over ? theme_alpha(256) : theme_alpha(128) );
+#endif
 }
 
 // slide #0
@@ -1501,9 +1524,9 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
 
         unsigned int next_id = (g_state.areaId<<16) | (g_state.widgetId+1);
         imguiStackPush();
-        g_state.widgetX += m - SLIDER_MARKER_WIDTH;
-        g_state.widgetY += SLIDER_HEIGHT + h/4;
-        bool res = imguiVerticalKnot( "", valLO, 0.f, 1.f, 0.1f, "" );
+        g_state.widgetX += m;
+        g_state.widgetY += SLIDER_MARKER_HEIGHT + DEFAULT_SPACING;
+        bool res = imguiSliderMarker( "", valLO, 0.f, 1.f, 0.1f, "" );
         int pos = imguiStackSet(-3);
         bool valChanged = false;
 
@@ -1538,9 +1561,9 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
 
         unsigned int next_id = (g_state.areaId<<16) | (g_state.widgetId+1);
         imguiStackPush();
-        g_state.widgetX += m - SLIDER_MARKER_WIDTH/4;
-        g_state.widgetY += SLIDER_HEIGHT + h/4;
-        bool res = imguiVerticalKnot( "", valHI, 0.f, 1.f, 0.1f, "" );
+        g_state.widgetX += m;
+        g_state.widgetY += SLIDER_MARKER_HEIGHT + DEFAULT_SPACING;
+        bool res = imguiSliderMarker( "", valHI, 0.f, 1.f, 0.1f, "" );
         int pos = imguiStackSet(-3);
         bool valChanged = false;
 
@@ -1568,21 +1591,6 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         has_changed |= valChanged;
 }
 
-#if 0
-        std::vector< std::pair<float,float> > points( 16 );
-        for( int i = 0, j = 16; i < j; ++i ) {
-            float dt01 = i / float(j-1);
-            float dt10 = 1 - dt01;
-            std::pair<float,float> &pt = points[i];
-            pt.first = x+m0+(m1-m0)*(dt01);
-            float t0 = *valLO*dt10;
-            float t1 = *valHI*dt01;
-            pt.second = y+(h*sand::tween(g_tween, t0+t1));
-        }
-        imguiDrawLines( points, 2, theme_alpha(256) );
-        //x+m0, y+*valLO * h, x+m1, y+*valHI * h, 2, theme_alpha(256));
-#endif
-
 // text
 
         // TODO: fix this, take a look at 'nicenum'.
@@ -1596,13 +1604,13 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
 
         if (enabled)
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
+                addGfxCmdText(x+w-SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, is_highlighted ? theme_alpha(256) : theme_alpha(192) ); // @rlyeh: fix blinking colours
         }
         else
         {
-                addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
-                addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, gray_alpha(192) );
+                addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, gray_alpha(192) );
+                addGfxCmdText(x+w-SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, gray_alpha(192) );
         }
 
         return is_res || has_changed;
@@ -1683,7 +1691,7 @@ void imguiPair(const char* text, const char *value)  // @rlyeh: new widget
     imguiValue(value);
 }
 
-bool imguiList(const char* text, size_t n_options, const char** options, int &choosing, int &clicked) // @rlyeh: new widget
+bool imguiList(const char* text, size_t n_options, const char** options, int &choosing, int &choice, int *scrollY ) // @rlyeh: new widget
 {
     g_state.widgetId++;
     unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
@@ -1707,7 +1715,7 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
 
         addGfxCmdTriangle((float)cx, (float)cy, CHECK_SIZE, CHECK_SIZE, choosing ? 2 : 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
 
-        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, clicked < 0 ? text : options[clicked], theme_alpha(192) );
+        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, choice < 0 ? text : options[choice], theme_alpha(192) );
 
         //addGfxCmdRoundedRect(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, isActive(id) ? theme_alpha(256) : theme_alpha(192));
 
@@ -1720,7 +1728,7 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
 
         addGfxCmdTriangle((float)cx, (float)cy, CHECK_SIZE, CHECK_SIZE, choosing ? 2 : 1, isActive(id) ? theme_alpha(256) : theme_alpha(192) );
 
-        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, clicked < 0 ? text : options[clicked], gray_alpha(192) );
+        addGfxCmdText(x+BUTTON_HEIGHT, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, choice < 0 ? text : options[choice], gray_alpha(192) );
 
         //addGfxCmdRoundedRect(x+w-BUTTON_HEIGHT/2, y+BUTTON_HEIGHT/2-TEXT_HEIGHT/2, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, isActive(id) ? theme_alpha(256) : theme_alpha(192));
     }
@@ -1731,6 +1739,8 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
     {
         // choice selector
         imguiIndent();
+            if( scrollY )
+            imguiBeginScrollArea(text,x,y-100-BUTTON_HEIGHT,w,h+100,scrollY);
             // hotness = are we on focus?
             bool hotness = isHot(id) | isActive(id);
             // choice selector list
@@ -1738,7 +1748,7 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
             {
                 // got answer?
                 if( imguiItem( options[n] ) )
-                    clicked = n, choosing = 0, result = true;
+                    choice = n, choosing = 0, scrollY = 0, result = true;
 
                 unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
@@ -1748,6 +1758,8 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
             // close on blur
             if( !hotness && anyHot() )
             {}//    choosing = 0;
+            if(scrollY)
+            imguiEndScrollArea();
         imguiUnindent();
     }
 
@@ -1803,8 +1815,8 @@ void imguiProgressBar(const char* text, float val, bool show_decimals)
     int x = g_state.widgetX;
     int y = g_state.widgetY - BUTTON_HEIGHT;
     int w = g_state.widgetW;
-    int h = SLIDER_HEIGHT;
-    g_state.widgetY -= SLIDER_HEIGHT + DEFAULT_SPACING;
+    int h = SLIDER_MARKER_HEIGHT;
+    g_state.widgetY -= SLIDER_MARKER_HEIGHT + DEFAULT_SPACING;
     g_state.push();
 
     addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
@@ -1816,7 +1828,7 @@ void imguiProgressBar(const char* text, float val, bool show_decimals)
     if (u > 1) u = 1;
     int m = (int)(u * range);
 
-    addGfxCmdRoundedRect((float)(x+0), (float)y, (float)(SLIDER_MARKER_WIDTH+m), (float)SLIDER_HEIGHT, 4.0f, theme_alpha(64) );
+    addGfxCmdRoundedRect((float)(x+0), (float)y, (float)(SLIDER_MARKER_WIDTH+m), (float)SLIDER_MARKER_HEIGHT, 4.0f, theme_alpha(64) );
 
     // TODO: fix this, take a look at 'nicenum'.
     int digits = (int)(std::ceilf(std::log10f(0.01f)));
@@ -1826,8 +1838,8 @@ void imguiProgressBar(const char* text, float val, bool show_decimals)
     else
     sprintf(msg, "%d%%", int(val) );
 
-    addGfxCmdText(x+SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, theme_alpha(192) );
-    addGfxCmdText(x+w-SLIDER_HEIGHT/2, y+SLIDER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, theme_alpha(192) );
+    addGfxCmdText(x+SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, text, theme_alpha(192) );
+    addGfxCmdText(x+w-SLIDER_MARKER_HEIGHT/2, y+SLIDER_MARKER_HEIGHT/2-TEXT_HEIGHT/2, IMGUI_ALIGN_RIGHT|IMGUI_ALIGN_BASELINE, msg, theme_alpha(192) );
 }
 
 bool imguiBitmask(const char* text, unsigned *mask, int bits)
@@ -1968,9 +1980,9 @@ void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int
         addGfxCmdLine(x0, y0, x1, y1, r, color);
 }
 
-void imguiDrawLines( const std::vector< std::pair<float,float> > &points, float r, unsigned int color) {
-        for( int i = 0; i < points.size() - 1; ++i ) {
-             imguiDrawLine(points[i].first, points[i].second, points[i+1].first, points[i+1].second, r, color);
+void imguiDrawLines( const std::vector< float > &points2d, float r, unsigned int color) {
+        for( int i = 0; i < points2d.size() - 2; i += 2 ) {
+             addGfxCmdLine(points2d[i], points2d[i+1], points2d[i+2], points2d[i+3], r, color);
         }
 }
 

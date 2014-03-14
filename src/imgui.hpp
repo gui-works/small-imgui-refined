@@ -26,7 +26,6 @@
 
 #include <string>
 #include <vector>
-#include <utility>
 
 enum imguiIntersection
 {
@@ -92,7 +91,7 @@ void imguiLabel(const char* text);
 void imguiValue(const char* text);
 bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, const char *format = "%d");
 bool imguiRange(const char* text, float* val0, float* val1, float vmin, float vmax, float vinc, const char *format = "%d - %d");
-bool imguiList(const char* text, size_t n_options, const char** options, int &choosing, int &clicked);
+bool imguiList(const char* text, size_t n_options, const char** options, int &choosing, int &choice, int *scrollY = 0);
 bool imguiRadio(const char* text, size_t n_options, const char** options, int &clicked);
 void imguiPair(const char *text, const char *value);
 void imguiProgressBar(const char* text, float val, bool show_decimals = false);
@@ -108,7 +107,7 @@ bool imguiXYSlider(const char* text, float* valx, float * valy, float height, fl
 // rendering
 void imguiDrawText(int x, int y, imguiTextAlign align, const char* text, unsigned int color);
 void imguiDrawLine(float x0, float y0, float x1, float y1, float r, unsigned int color);
-void imguiDrawLines( const std::vector< std::pair<float,float> > &points, float r, unsigned int color);
+void imguiDrawLines( const std::vector<float> &points2d, float r, unsigned int color);
 void imguiDrawRoundedRect(float x, float y, float w, float h, float r, unsigned int color);
 void imguiDrawRect(float x, float y, float w, float h, unsigned int color);
 void imguiDrawArc(float x, float y, float radius, float from, float to, unsigned int color);
