@@ -170,6 +170,10 @@ static void imguiResetCaret() {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static int g_tween = 0;
+static void imguiResetTween() {
+    g_tween = 0;
+}
+
 void imguiTween( int mode ) {
     g_tween = mode;
 }
@@ -570,6 +574,7 @@ void imguiBeginFrame(int mx, int my, unsigned char mbut, int scrollY, unsigned c
         imguiResetMouse();
         imguiResetColors();
         imguiResetEnables();
+        imguiResetTween();
 
         updateInput(mx,my,mbut,scrollY,codepoint);
 
@@ -1635,7 +1640,7 @@ std::vector<unsigned> imguiTextConv( const std::string &ascii )
     return out;
 }
 
-bool imguiTextInput( const char* text, std::vector<unsigned> &utf32 )
+bool imguiTextInput( const char* text, std::vector<unsigned> &utf32, bool is_password )
 {
     bool res = true;
     //--
@@ -1668,7 +1673,7 @@ bool imguiTextInput( const char* text, std::vector<unsigned> &utf32 )
     int h = BUTTON_HEIGHT;
     bool over = inRect(x, y, w, h);
     res = textInputLogic(id, over);
-    std::string utf8 = imguiTextConv( utf32 );
+    std::string utf8 = is_password ? std::string( utf32.size(), '*' ) : imguiTextConv( utf32 );
     if( enabled ) {
         if( caret && isInputable(id) ) utf8.push_back('|');
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, isInputable(id) ? theme_alpha(256):gray_alpha(96));

@@ -86,7 +86,7 @@ bool imguiCheck(const char* text, bool checked);
 bool imguiCollapse(const char* text, const char* subtext, bool checked);
 bool imguiItem(const char* text);
 bool imguiText(const char* text);
-bool imguiTextInput(const char* text, std::vector<unsigned> &utf32);
+bool imguiTextInput(const char* text, std::vector<unsigned> &utf32, bool isPassword = false);
 void imguiLabel(const char* text);
 void imguiValue(const char* text);
 bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vinc, const char *format = "%d");
