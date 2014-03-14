@@ -1093,6 +1093,76 @@ bool imguiRotatorySlider(const char* text, float* val, float vmin, float vmax, f
         return clicked || valChanged;
 }
 
+bool imguiXYSlider(const char* text, float* valX, float* valY, float height, float vinc, const char *format)
+{
+        g_state.widgetId++;
+        unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+        int w = g_state.widgetW;
+        int h = height < BUTTON_HEIGHT ? BUTTON_HEIGHT : height;
+        int x = g_state.widgetX;
+        int y = g_state.widgetY - height;
+
+        g_state.widgetX += w;
+        g_state.widgetW -= w;
+        g_state.push();
+        g_state.widgetX -= w;
+        g_state.widgetW += w;
+        g_state.push();
+        g_state.widgetY -= h + DEFAULT_SPACING;
+        g_state.push();
+
+        bool over = enabled && inRect(x, y, w, h, true);
+        bool clicked = buttonLogic(id, over);
+        bool valChanged = false;
+
+        if( clicked )
+        {
+            *valX = g_state.mx - (x + w/2);
+            *valY = g_state.my - (y + h/2);
+        }
+
+        // TODO: fix this, take a look at 'nicenum'.
+        int digits = (int)(std::ceilf(std::log10f(vinc)));
+        char msg[128];
+        const char *replaced = replace_str( format, "%d", "%.*f" );
+        sprintf(msg, replaced ? replaced : "(%.*f,%.*f)", digits >= 0 ? 0 : -digits, *valX, digits >= 0 ? 0 : -digits, *valY);
+        if( replaced ) {
+            free( (void *)replaced );
+        }
+
+        float mx = g_state.mx, my = g_state.my;
+        char mmsg[128];
+        replaced = replace_str( format, "%d", "%.*f" );
+        sprintf(mmsg, replaced ? replaced : "(%.*f,%.*f)", digits >= 0 ? 0 : -digits, mx - (x + w/2), digits >= 0 ? 0 : -digits, my - (y + h/2));
+        if( replaced ) {
+            free( (void *)replaced );
+        }
+
+        unsigned int fg = isHot(id) | isActive(id) ? theme_alpha(192) : theme_alpha(128);
+        unsigned int bg = isHot(id) | isActive(id) ? theme_alpha(32) : theme_alpha(16);
+
+        if( !enabled ) {
+            fg = isHot(id) | isActive(id) ? gray_alpha(192) : gray_alpha(128);
+            bg = isHot(id) | isActive(id) ? gray_alpha(32) : gray_alpha(16);
+        }
+
+        imguiDrawRect(x,y,w,h, bg);
+
+        imguiDrawLine( x+w/2, y, x+w/2, y+h, 2, fg );
+        imguiDrawLine( x, y+h/2, x+w, y+h/2, 2, fg );
+
+        imguiDrawLine( mx, y, mx, y+h, 2, bg );
+        imguiDrawLine( x, my, x+w, my, 2, bg );
+
+        addGfxCmdText(x+w/2, y+h/2, IMGUI_ALIGN_CENTER|IMGUI_ALIGN_BOTTOM, msg, fg );
+        addGfxCmdText(x+w/2, y+h/2, IMGUI_ALIGN_CENTER|IMGUI_ALIGN_TOP, mmsg, bg );
+
+        float cx = x+w/2+(*valX-CHECK_SIZE/2), cy = y+h/2+(*valY-CHECK_SIZE/2);
+        addGfxCmdRoundedRect((float)cx, (float)cy, (float)CHECK_SIZE, (float)CHECK_SIZE, (float)CHECK_SIZE/2-1, fg );
+
+        return clicked || valChanged;
+}
 
 bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vmax, float vinc, const char *format)
 {
@@ -1498,7 +1568,7 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         has_changed |= valChanged;
 }
 
-#if 1
+#if 0
         std::vector< std::pair<float,float> > points( 16 );
         for( int i = 0, j = 16; i < j; ++i ) {
             float dt01 = i / float(j-1);

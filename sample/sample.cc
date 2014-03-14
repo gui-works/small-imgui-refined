@@ -1,5 +1,5 @@
 // sample.cc - public domain
-// authored from 2012-2013 by Adrien Herubel
+// authored from 2012-2013 by Adrien Herubel, 2014 by r-lyeh
 
 
 #include <stdio.h>
@@ -232,6 +232,13 @@ $GL2(
                 imguiPushEnable( false );
                 imguiRotatorySlider("", &value1, 0.f, 100.f, 1.f);
                 imguiPopEnable();
+
+        {
+            static float X = 0, Y = 0;
+            if( imguiXYSlider( "test", &X, &Y, 100, 0.1f ) ) {
+                printf("clicked\n");
+            }
+        }
 
         imguiRange("Range", &value3A, &value3B, 0.f, 100.f, 1.f);
 				imguiPushEnable(false);

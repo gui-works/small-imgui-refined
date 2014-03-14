@@ -20,7 +20,7 @@ About
 
 The OpenGL backend was ported from OpenGL immediate mode to OpenGL 3.2 mainly to be compatible with Mac OS X core profile.
 
-This fork features cmake, smaller code base, cleanups, colors and fonts remade, and a few new widgets.
+This unofficial fork features cmake, smaller code base, cleanups, color handling, builtin fonts, different font handling, and many new widgets.
 
 ![image](https://raw.github.com/r-lyeh/depot/master/imgui.png)
 

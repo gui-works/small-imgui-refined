@@ -99,6 +99,7 @@ void imguiProgressBar(const char* text, float val, bool show_decimals = false);
 bool imguiBitmask(const char* text, unsigned* mask, int bits);
 bool imguiRotatorySlider(const char *text, float *val, float vmin, float vmax, float vinc, const char *format = "%d");
 bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, float vmax, float vinc, float *valLO, float *valHI, const char *format = "%d - %d");
+bool imguiXYSlider(const char* text, float* valx, float * valy, float height, float vinc, const char *format = "(%d,%d)");
 
 //bool imguiLink();
 //      bool imguiImage();
