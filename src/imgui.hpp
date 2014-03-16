@@ -36,8 +36,8 @@ enum imguiIntersection
 
 enum imguiMouseButton
 {
-        IMGUI_MBUT_LEFT = 0x01,
-        IMGUI_MBUT_RIGHT = 0x02,
+        IMGUI_MOUSE_BUTTON_LEFT = 0x01,
+        IMGUI_MOUSE_BUTTON_RIGHT = 0x02,
 };
 
 enum imguiTextAlign // same than fontstash
@@ -155,8 +155,8 @@ void imguiPopEnable();
 
 // mouse
 enum {
-        IMGUI_MOUSE_ARROW = 1,
-        IMGUI_MOUSE_HAND = 2
+        IMGUI_MOUSE_ICON_ARROW = 1,
+        IMGUI_MOUSE_ICON_HAND = 2
 };
 int imguiGetMouseCursor();
 
@@ -210,6 +210,8 @@ struct imguiGfxCmd
                 imguiGfxArc  arc;
         };
 };
+
+imguiGfxRect imguiRect( unsigned id );
 
 const imguiGfxCmd* imguiGetRenderQueue();
 int imguiGetRenderQueueSize();

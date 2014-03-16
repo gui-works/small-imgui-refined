@@ -29,6 +29,7 @@
 #include <vector>
 #include "imgui.hpp"
 #include <iostream>
+#include <map>
 
 #ifdef _MSC_VER
 #   pragma warning(push)
@@ -175,7 +176,7 @@ static void imguiResetTween() {
 }
 
 void imguiTween( unsigned mode ) {
-    g_tween = mode;
+    g_tween = mode % 38;
 }
 
 namespace sand {
@@ -187,7 +188,7 @@ namespace sand {
 static int mouse = 0;
 
 static void imguiResetMouse() {
-    mouse = IMGUI_MOUSE_ARROW;
+    mouse = IMGUI_MOUSE_ICON_ARROW;
 }
 
 int imguiGetMouseCursor() {
@@ -341,46 +342,50 @@ static void addGfxCmdArc(float x, float y, float r, float t0, float t1, unsigned
         cmd.arc.w = ROTATORY_RING_WIDTH;
 }
 
+static std::map< unsigned, imguiGfxRect > g_rects;
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#include <vector>
+
 struct coord {
         int widgetX, widgetY, widgetW;
         coord() : widgetX(0),widgetY(0),widgetW(100)
         {}
 };
 
-#include <vector>
-
+static
 struct GuiState : public coord
 {
-        GuiState() :
-                left(false), leftPressed(false), leftReleased(false),
-                mx(-1), my(-1), scrollY(0), codepoint(0), codepoint_last(0),
-                inputable(0), active(0), hot(0), hotToBe(0), isHot(false), isActive(false), wentActive(false),
-                dragX(0), dragY(0), dragOrig(0),
-                insideCurrentScrollY(false),  areaId(0), widgetId(0)
-        {
-        }
+        GuiState()
+        {}
 
-        bool left;
-        bool leftPressed, leftReleased;
-        int mx,my;
-        int scrollY;
+        bool left = false, leftPressed = false, leftReleased = false;
+        bool right = false, rightPressed = false, rightReleased = false;
 
-        unsigned codepoint, codepoint_last, codepoint_repeat;
+        int mx = -1, my = -1;
+        int scrollX = 0, scrollY = 0;
 
-        unsigned int inputable;
-        unsigned int active;
-        unsigned int hot;
-        unsigned int hotToBe;
+        unsigned codepoint = 0, codepoint_last = 0, codepoint_repeat = 0;
 
-        bool isHot;
-        bool isActive;
-        bool wentActive;
-        unsigned clicked;
-        unsigned over;
+        unsigned int inputable = 0;
+        unsigned int active = 0;
+        unsigned int hot = 0;
+        unsigned int hotToBe = 0;
 
-        int dragX, dragY;
-        float dragOrig;
+        bool isHot = false;
+        bool isActive = false;
+        bool wentActive = false;
+        unsigned clicked = 0;
+        unsigned over = 0;
+
+        int dragX = 0, dragY = 0;
+        float dragOrig = 0;
+
+        bool insideCurrentScrollY = 0;
+
+        unsigned int areaId = 0;
+        unsigned int widgetId = 0;
 
         std::vector<coord> coords;
         void clear() {
@@ -393,14 +398,7 @@ struct GuiState : public coord
             if (pos < 0) pos = coords.size() - 1 + pos;
             *((coord*)this) = coords.at(pos);
         }
-
-        bool insideCurrentScrollY;
-
-        unsigned int areaId;
-        unsigned int widgetId;
-};
-
-static GuiState g_state;
+} g_state;
 
 void imguiStackPush() {
     g_state.push();
@@ -450,7 +448,7 @@ inline bool isHot(unsigned int id)
 inline void cancelHot()
 {
     g_state.hot = 0;
-    mouse = IMGUI_MOUSE_ARROW;
+    mouse = IMGUI_MOUSE_ICON_ARROW;
 }
 
 inline bool anyHot()
@@ -460,6 +458,8 @@ inline bool anyHot()
 
 inline bool inRect(unsigned id, int x, int y, int w, int h, bool checkScrollY = true)
 {
+    g_rects[ id ] = {x,y,w,h,0};
+
     bool res = (!checkScrollY || g_state.insideCurrentScrollY) && g_state.mx >= x && g_state.mx <= x+w && g_state.my >= y && g_state.my <= y+h;
     if( res ) {
         g_state.over = id;
@@ -529,7 +529,7 @@ static bool buttonLogic(unsigned int id, bool over)
         }
 
         if(g_state.isHot) {
-            mouse = IMGUI_MOUSE_HAND;
+            mouse = IMGUI_MOUSE_ICON_HAND;
         }
 
         if( res ) {
@@ -559,13 +559,19 @@ static bool textInputLogic(unsigned int id, bool over){
 
 static void updateInput(int mx, int my, unsigned char mbut, int scrollY, unsigned codepoint)
 {
-        bool left = (mbut & IMGUI_MBUT_LEFT) != 0;
+        bool left = (mbut & IMGUI_MOUSE_BUTTON_LEFT) != 0;
+        bool right = (mbut & IMGUI_MOUSE_BUTTON_RIGHT) != 0;
 
         g_state.mx = mx;
         g_state.my = my;
+
         g_state.leftPressed = !g_state.left && left;
         g_state.leftReleased = g_state.left && !left;
         g_state.left = left;
+
+        g_state.rightPressed = !g_state.right && right;
+        g_state.rightReleased = g_state.right && !right;
+        g_state.right = right;
 
         g_state.scrollY = scrollY;
 
@@ -576,6 +582,10 @@ static void updateInput(int mx, int my, unsigned char mbut, int scrollY, unsigne
             if( g_state.codepoint_repeat > IMGUI_KEYBOARD_KEYREPEAT + 1 ) {
                 g_state.codepoint_repeat = unsigned(g_state.codepoint_repeat * 0.80);
             }
+        }
+
+        if( !g_state.left ) {
+            g_state.dragX = g_state.dragY = 0;
         }
 
         g_state.codepoint_last = g_state.codepoint;
@@ -777,7 +787,7 @@ bool imguiButton(const char* text)
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
-        bool over = enabled && inRect(id, x, y, w, h, true);
+        bool over = inRect(id, x, y, w, h, true) && enabled;
         bool res = buttonLogic(id, over);
 
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, (float)BUTTON_HEIGHT/2-1, isActive(id) ? gray_alpha(196) : gray_alpha(96) );
@@ -808,7 +818,7 @@ bool imguiItem(const char* text)
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
-        bool over = enabled && inRect(id, x, y, w, h, true);
+        bool over = inRect(id, x, y, w, h, true) && enabled;
         bool res = buttonLogic(id, over);
 
         if (isHot(id))
@@ -841,7 +851,7 @@ bool imguiText(const char* text)
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
-        bool over = enabled && inRect(id, x, y, w, h, true);
+        bool over = inRect(id, x, y, w, h, true) && enabled;
         bool res = buttonLogic(id, over);
 
         if (enabled)
@@ -864,7 +874,7 @@ bool imguiCheck(const char* text, bool checked)
         g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
         g_state.push();
 
-        bool over = enabled && inRect(id, x, y, w, h, true);
+        bool over = inRect(id, x, y, w, h, true) && enabled;
         bool res = buttonLogic(id, over);
 
         const int cx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
@@ -901,7 +911,7 @@ bool imguiCollapse(const char* text, const char* subtext, bool checked)
         const int cx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
         const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
 
-        bool over = enabled && inRect(id, x, y, w, h, true);
+        bool over = inRect(id, x, y, w, h, true) && enabled;
         bool res = buttonLogic(id, over);
 
         if (checked)
@@ -957,7 +967,7 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         if (u > 1) u = 1;
         int m = (int)(u * range);
 
-        bool over = enabled && inRect(id, x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true);
+        bool over = inRect(id, x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true) && enabled;
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1032,7 +1042,7 @@ bool imguiLoadingBar() {
         g_state.widgetY -= h + DEFAULT_SPACING;
         g_state.push();
 
-        bool over = enabled && inRect(id, x, y, w, h, true);
+        bool over = inRect(id, x, y, w, h, true) && enabled;
         bool clicked = buttonLogic(id, over);
 
         unsigned int bg = isHot(id) | isActive(id) ? theme_alpha(96) : theme_alpha(64);
@@ -1077,7 +1087,7 @@ bool imguiRotatorySlider(const char* text, float* val, float vmin, float vmax, f
 
 //        addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
 
-        bool over = enabled && inRect(id, x, y, w, h, true);
+        bool over = inRect(id, x, y, w, h, true) && enabled;
         bool clicked = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1191,7 +1201,7 @@ bool imguiXYSlider(const char* text, float* valX, float* valY, float height, flo
         g_state.widgetY -= h + DEFAULT_SPACING;
         g_state.push();
 
-        bool over = enabled && inRect(id, x, y, w, h, true);
+        bool over = inRect(id, x, y, w, h, true) && enabled;
         bool clicked = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1284,7 +1294,7 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        bool over = enabled && inRect(id, x+m0, y, m1 - m0 + SLIDER_MARKER_WIDTH, h, true);
+        bool over = inRect(id, x+m0, y, m1 - m0 + SLIDER_MARKER_WIDTH, h, true) && enabled;
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1327,7 +1337,7 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        bool over = enabled && inRect(id, x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true);
+        bool over = inRect(id, x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true) && enabled;
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1370,7 +1380,7 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        bool over = enabled && inRect(id, x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true);
+        bool over = inRect(id, x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true) && enabled;
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1461,7 +1471,7 @@ bool imguiSliderMarker(const char* text, float* val, float vmin, float vmax, flo
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        bool over = enabled && inRect(id, x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true);
+        bool over = inRect(id, x+m, y, SLIDER_MARKER_WIDTH, SLIDER_MARKER_HEIGHT, true) && enabled;
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1470,14 +1480,16 @@ bool imguiSliderMarker(const char* text, float* val, float vmin, float vmax, flo
             g_state.scrollY = 0; // capture scroll so container's window area does not scroll
         }
 
-        unsigned int col = theme_alpha(128);
-        if (isActive(id) || isHot(id)) col = theme_alpha(256);
+        unsigned int bg = theme_alpha(64);
+        unsigned int fg = theme_alpha(128);
+        if (isActive(id) || isHot(id)) fg = theme_alpha(256);
         if( !enabled ) {
-            col = gray_alpha(64);
+            fg = gray_alpha(64);
+            bg = gray_alpha(16);
         }
 
-        addGfxCmdRoundedRect((float)(x), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT, 4.0f, theme_alpha(64) );
-        addGfxCmdRect((float)(x), (float)y+SLIDER_MARKER_HEIGHT*u, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT * vinc, col );
+        addGfxCmdRoundedRect((float)(x), (float)y, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT, 4.0f, bg );
+        addGfxCmdRect((float)(x), (float)y+SLIDER_MARKER_HEIGHT*u, (float)SLIDER_MARKER_WIDTH, (float)SLIDER_MARKER_HEIGHT * vinc, fg );
 
         is_highlighted |= ( isHot(id) | isActive(id) );
         is_res |= res;
@@ -1532,7 +1544,7 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        bool over = enabled && inRect(id, x+m0, y, m1 - m0 + SLIDER_MARKER_WIDTH, h, true);
+        bool over = inRect(id, x+m0, y, m1 - m0 + SLIDER_MARKER_WIDTH, h, true) && enabled;
         bool res = buttonLogic(id, over);
         bool valChanged = false;
 
@@ -1581,7 +1593,9 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         }
         m1 += 0;
         m0 -= SLIDER_MARKER_WIDTH;
-        imguiDrawLines( points, 2, over ? theme_alpha(256) : theme_alpha(128) );
+        unsigned lnfg = over ? theme_alpha(256) : theme_alpha(128);
+        if( !enabled ) lnfg = gray_alpha(96);
+        imguiDrawLines( points, 2, lnfg );
 #endif
 }
 
@@ -1774,7 +1788,7 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
     const int cx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
     const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
 
-    bool over = enabled && inRect(id, x, y, w, h, true);
+    bool over = inRect(id, x, y, w, h, true) && enabled;
     bool res = buttonLogic(id, over);
 
     if (enabled)
@@ -1849,7 +1863,7 @@ bool imguiRadio(const char* text, size_t n_options, const char** options, int &c
     const int cx = x+BUTTON_HEIGHT/2-CHECK_SIZE/2;
     const int cy = y+BUTTON_HEIGHT/2-CHECK_SIZE/2;
 
-    bool over = enabled && inRect(id, x, y, w, h, true);
+    bool over = inRect(id, x, y, w, h, true) && enabled;
     bool res = buttonLogic(id, over);
 
     if (enabled)
@@ -1952,7 +1966,7 @@ g_state.push();
 
             g_state.widgetId++;
             unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
-            bool over = enabled && inRect(id, (float)cx-3, (float)cy-3, (float)CHECK_SIZE+8, (float)CHECK_SIZE+8, true);
+            bool over = inRect(id, (float)cx-3, (float)cy-3, (float)CHECK_SIZE+8, (float)CHECK_SIZE+8, true) && enabled;
             bool res = buttonLogic(id, over);
 
             if( res ) {
@@ -2085,12 +2099,9 @@ static float imguiClamp(float a, float mn, float mx) {
 static float imguiHue(float h, float m1, float m2) {
     if (h < 0) h += 1;
     if (h > 1) h -= 1;
-    if (h < 1.0f/6.0f)
-        return m1 + (m2 - m1) * h * 6.0f;
-    else if (h < 3.0f/6.0f)
-        return m2;
-    else if (h < 4.0f/6.0f)
-        return m1 + (m2 - m1) * (2.0f/3.0f - h) * 6.0f;
+    /**/ if (h < 1.0f/6.0f) return m1 + (m2 - m1) * h * 6.0f;
+    else if (h < 3.0f/6.0f) return m2;
+    else if (h < 4.0f/6.0f) return m1 + (m2 - m1) * (2.0f/3.0f - h) * 6.0f;
     return m1;
 }
 
@@ -2155,12 +2166,24 @@ bool imguiDrop( unsigned id );
 bool imguiOver( unsigned id ) {
     return g_state.over == id;
 }
-bool imguiHot( unsigned id );
-bool imguiActive( unsigned id );
+bool imguiHot( unsigned id ) {
+    return isHot(id);
+}
+bool imguiActive( unsigned id ) {
+    return isActive( id );
+}
 
 unsigned imguiId() {
     unsigned id = (g_state.areaId<<16) | g_state.widgetId;
     return id;
+}
+
+imguiGfxRect imguiRect( unsigned id ) {
+    auto found = g_rects.find(id);
+    if( found == g_rects.end() ) {
+        return {0,0,0,0,0};
+    }
+    return found->second;
 }
 
 #ifdef _MSC_VER
