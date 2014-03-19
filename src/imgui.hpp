@@ -102,7 +102,9 @@ bool imguiBitmask(const char* text, unsigned* mask, int bits);
 bool imguiRotatorySlider(const char *text, float *val, float vmin, float vmax, float vinc, const char *format = "%d");
 bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, float vmax, float vinc, float *valLO, float *valHI, const char *format = "%d - %d");
 bool imguiXYSlider(const char* text, float* valx, float * valy, float height, float vinc, const char *format = "(%d,%d)");
-bool imguiLoadingBar();
+bool imguiLoadingBar( int flow = 0, float radius = 25.f );
+bool imguiIcon( unsigned icon );
+ int imguiToolbar( const std::vector<unsigned> &icons );
 
 // control
 bool imguiWheel( unsigned id );
@@ -135,7 +137,8 @@ void imguiDrawCircle(float x, float y, float radius, unsigned int color);
 // text
 int imguiTextLength(const char *text);
 // utf32 to utf8
-std::string imguiTextConv(const std::vector<unsigned>& utf32 );
+std::string imguiTextConv( const unsigned &utf32 );
+std::string imguiTextConv( const std::vector<unsigned>& utf32 );
 // ascii to utf32
 std::vector<unsigned> imguiTextConv(const std::string& ascii );
 
@@ -152,6 +155,10 @@ int imguiShowDialog( const char *text, int *answer );
 // enable
 void imguiPushEnable( int enabled = 1 );
 void imguiPopEnable();
+
+// feed
+void imguiBack(); // \r
+void imguiNext(); // \n
 
 // mouse
 enum {

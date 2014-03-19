@@ -424,6 +424,12 @@ void imguiSpaceUnshift() {
     g_state.widgetX -= g_state.widgetW;
     g_state.push();
 }
+void imguiNext() {
+
+}
+void imguiBack() {
+
+}
 
 inline bool anyActive()
 {
@@ -862,6 +868,33 @@ bool imguiText(const char* text)
         return res;
 }
 
+bool imguiIcon( unsigned icon ) {
+    return imguiText( ( std::string("\2") + imguiTextConv( icon ) ).c_str() );
+}
+
+int imguiToolbar( const std::vector<unsigned> &icons ) {
+    int res = 0;
+
+    if( imguiIcon( icons.front() ) ) {
+        res = 1;
+    }
+
+    int pos_ = imguiStackSet(-1);
+    imguiStackSet(pos_);
+
+    for( auto begin = icons.begin(), end = icons.end(), it = begin + 1; it != end; ++it ) {
+        int pos = imguiStackSet(-2);
+        if( imguiIcon( *it ) ) {
+            res = 1 + it - begin;
+        }
+        imguiStackSet(pos);
+    }
+
+    imguiStackSet(pos_);
+
+    return res;
+}
+
 bool imguiCheck(const char* text, bool checked)
 {
         g_state.widgetId++;
@@ -1020,15 +1053,15 @@ bool imguiSlider(const char* text, float* val, float vmin, float vmax, float vin
         return res || valChanged;
 }
 
-bool imguiLoadingBar() {
+bool imguiLoadingBar( int flow, float radius ) {
 
         g_state.widgetId++;
         unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
 
-        int w = ROTATORY_AREA_WIDTH;
-        int h = ROTATORY_AREA_HEIGHT;
-        int x = g_state.widgetX;
-        int y = g_state.widgetY - h;
+        int w = /* ROTATORY_AREA_WIDTH * */ int(radius);
+        int h = /* ROTATORY_AREA_HEIGHT */ w;
+        int x = g_state.widgetX + 0 + ( ROTATORY_AREA_WIDTH - w )/2;
+        int y = g_state.widgetY - h - ( ROTATORY_AREA_HEIGHT - h )/2;
         int cx = x + w/2;
         int cy = y + h/2;
         int r = w/2;
@@ -1055,6 +1088,7 @@ bool imguiLoadingBar() {
         addGfxCmdArc(cx, cy, r, 0, 1, bg);
 
         float from = ( frame % 30 ) / 30.f;
+        if( !flow ) from = 1 - from;
         float to = fmodf( from + 0.33f, 1.f );
         if( from < to ) {
             addGfxCmdArc(cx, cy, r, from, to, fg);
@@ -1317,6 +1351,10 @@ bool imguiRange(const char* text, float* val0, float *val1, float vmin, float vm
                         *val = vmin + u*(vmax-vmin);
                         *val = floorf(*val/vinc+0.5f)*vinc; // Snap to vinc
                         *val1 = *val + diff;
+                        if( *val1 > vmax ) {
+                            *val1 = vmax;
+                            *val0 = *val1 - diff;
+                        }
                         //m = (int)(u * range);
                         has_changed = true;
                 }
@@ -1567,6 +1605,10 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
                         *val = vmin + u*(vmax-vmin);
                         *val = floorf(*val/vinc+0.5f)*vinc; // Snap to vinc
                         *val1 = *val + diff;
+                        if( *val1 > vmax ) {
+                            *val1 = vmax;
+                            *val0 = *val1 - diff;
+                        }
                         //m = (int)(u * range);
                         has_changed = true;
                 }
@@ -1578,7 +1620,7 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         addGfxCmdRoundedRect((float)x + m0, (float)y, (float)m1 - m0 + SLIDER_MARKER_WIDTH, (float)h, 4.0f, col );
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
 
-#if 0
+#if 1
         m0 += SLIDER_MARKER_WIDTH;
         m1 -= 0;
         std::vector< float > points( 16*2 );
@@ -1698,6 +1740,10 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         return is_res || has_changed;
 }
 
+std::string imguiTextConv( const unsigned &utf32 )
+{
+    return cpToUTF8( utf32 );
+}
 
 std::string imguiTextConv( const std::vector<unsigned> &utf32 )
 {
