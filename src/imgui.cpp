@@ -394,6 +394,9 @@ struct GuiState : public coord
         void push() {
             coords.push_back(*this);
         }
+        void pop() {
+            coords.pop_back();
+        }
         void set( int pos ) {
             if (pos < 0) pos = coords.size() - 1 + pos;
             *((coord*)this) = coords.at(pos);
@@ -407,6 +410,9 @@ int imguiStackSet(int pos) {
     int cur = g_state.coords.size() - 1;
     g_state.set(pos);
     return cur;
+}
+void imguiStackPop() {
+    g_state.pop();
 }
 void imguiSpaceDiv() {
     g_state.widgetW /= 2;
@@ -665,25 +671,28 @@ bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scr
         g_state.widgetId = 0;
         g_scrollId = (g_state.areaId<<16) | g_state.widgetId;
 
+        int AREA_HEADING = name ? AREA_HEADER : AREA_HEADER - BUTTON_HEIGHT;
+
         g_state.widgetX = x + SCROLL_AREA_PADDING;
-        g_state.widgetY = y+h-AREA_HEADER + (scrollY ? *scrollY : 0); // @rlyeh: support for fixed areas
+        g_state.widgetY = y+h-AREA_HEADING + (scrollY ? *scrollY : 0); // @rlyeh: support for fixed areas
         g_state.widgetW = w - SCROLL_AREA_PADDING*4;
         g_state.push();
-        g_scrollTop = y-AREA_HEADER+h;
+        g_scrollTop = y-AREA_HEADING+h;
         g_scrollBottom = y+SCROLL_AREA_PADDING;
         g_scrollRight = x+w - SCROLL_AREA_PADDING*3;
         g_scrollVal = scrollY;
 
         g_scrollAreaTop = g_state.widgetY;
 
-        g_focusTop = y-AREA_HEADER;
-        g_focusBottom = y-AREA_HEADER+h;
+        g_focusTop = y-AREA_HEADING;
+        g_focusBottom = y-AREA_HEADING+h;
 
         g_insideScrollArea = inRect(g_scrollId, x, y, w, h, false);
         g_state.insideCurrentScrollY = g_insideScrollArea;
 
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 6, black_alpha(192) );
 
+        if( name )
         addGfxCmdText(x+AREA_HEADER/2, y+h-AREA_HEADER/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, name, white_alpha(128) );
 
         if( g_scrollVal ) { // @rlyeh: support for fixed areas
@@ -691,7 +700,7 @@ bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scr
               x < 0 ? 0 : x+SCROLL_AREA_PADDING, //@rlyeh: fix scissor clipping problem when scroll area is on left rect client
               y+SCROLL_AREA_PADDING,
               w-SCROLL_AREA_PADDING*4 + ( x < 0 ? x : 0 ),   // @rlyeh: small optimization; @todo: on the right as well
-              h > (AREA_HEADER + SCROLL_AREA_PADDING ) ? h - (AREA_HEADER + SCROLL_AREA_PADDING) : h ); // @rlyeh: fix when collapsing areas ( h <= AREA_HEADER )
+              h > (AREA_HEADING + SCROLL_AREA_PADDING ) ? h - (AREA_HEADING + SCROLL_AREA_PADDING) : h ); // @rlyeh: fix when collapsing areas ( h <= AREA_HEADER )
         }
 
         return g_insideScrollArea;
@@ -875,22 +884,20 @@ bool imguiIcon( unsigned icon ) {
 int imguiToolbar( const std::vector<unsigned> &icons ) {
     int res = 0;
 
-    if( imguiIcon( icons.front() ) ) {
-        res = 1;
-    }
+    imguiStackPush();
+    imguiStackPush();
 
-    int pos_ = imguiStackSet(-1);
-    imguiStackSet(pos_);
+    int pos = imguiStackSet(-1);
 
-    for( auto begin = icons.begin(), end = icons.end(), it = begin + 1; it != end; ++it ) {
+    for( auto begin = icons.begin(), end = icons.end(), it = begin; it != end; ++it ) {
         int pos = imguiStackSet(-2);
         if( imguiIcon( *it ) ) {
             res = 1 + it - begin;
         }
-        imguiStackSet(pos);
     }
 
-    imguiStackSet(pos_);
+    imguiStackSet(pos);
+    //imguiStackSet( -3 * icons.size() - 3 );
 
     return res;
 }
@@ -1868,7 +1875,7 @@ bool imguiList(const char* text, size_t n_options, const char** options, int &ch
         // choice selector
         imguiIndent();
             if( scrollY )
-            imguiBeginScrollArea(text,x,y-100-BUTTON_HEIGHT,w,h+100,scrollY);
+            imguiBeginScrollArea(0,x,y-150-BUTTON_HEIGHT,w,h+150,scrollY);
             // hotness = are we on focus?
             bool hotness = isHot(id) | isActive(id);
             // choice selector list

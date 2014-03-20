@@ -1,0 +1,3 @@
+[submodule "fontbase"]
+    path = fontbase
+    url = https://github.com/r-lyeh/fontbase
