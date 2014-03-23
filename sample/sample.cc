@@ -173,7 +173,7 @@ $GL3(
         int middleButton = glfwGetMouseButton( window, GLFW_MOUSE_BUTTON_MIDDLE );
         int toggle = 0;
         if( leftButton == GLFW_PRESS )
-            mousebutton |= IMGUI_MBUT_LEFT;
+            mousebutton |= IMGUI_MOUSE_BUTTON_LEFT;
 
         // Draw UI
 $GL2(

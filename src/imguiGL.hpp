@@ -59,4 +59,8 @@
  bool imguiRenderGLFontInit(int font, float pt, const void *data, unsigned size);
  bool imguiRenderGLFontInit(int font, float pt, const char* fontpath);
 
+unsigned imguiRenderGLMakeTexture( const void *data, unsigned size );
+unsigned imguiRenderGLMakeTexture( const char *imagepath );
+void     imguiRenderGLDestroyTexture( unsigned id );
+
 #endif // IMGUIGL_HPP

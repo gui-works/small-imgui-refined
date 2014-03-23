@@ -27,6 +27,8 @@
 #include "imgui.hpp"
 #include "imguiGL.hpp"
 
+#include "stb_image.h"
+
 // Some math headers don't have PI defined.
 static const float PI = 3.14159265f;
 
@@ -601,6 +603,7 @@ $GL3(
 )
 }
 
+#if 0
 static void getBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_index,
 						 float *xpos, float *ypos, stbtt_aligned_quad *q)
 {
@@ -620,6 +623,7 @@ static void getBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_ind
 
 	*xpos += b->xadvance;
 }
+#endif
 
 static void drawText(float x, float y, const char *ftext, int align, unsigned int col) {
 /*$GL3(
@@ -722,6 +726,73 @@ $GL3(
 		{
 			drawArc( cmd.arc.x, cmd.arc.y, cmd.arc.r, cmd.arc.t0, cmd.arc.t1, cmd.arc.w, cmd.col );
 		}
+		else if (cmd.type == IMGUI_GFXCMD_TEXTURE)
+		{
+			/*
+				drawRect((float)cmd.rect.x*s+0.5f, (float)cmd.rect.y*s+0.5f,
+						 (float)cmd.rect.w*s-1, (float)cmd.rect.h*s-1,
+						 1.0f, cmd.col);
+						 */
+		}
 	}
 	glDisable(GL_SCISSOR_TEST);
+}
+
+unsigned imguiRenderGLMakeTexture( const void *data, unsigned size ) {
+    int w,h,n;
+    unsigned char *rgba = stbi_load_from_memory( (unsigned char *)data, size, &w, &h, &n, 4 );
+    if( !rgba )
+    	return 0;
+
+	GLuint id;
+    glGenTextures( 1, &id );
+    glBindTexture(GL_TEXTURE_2D, id );
+
+                // submit decoded data to texture
+
+                GLint   UnpackAlignment;
+
+                // Here we bind the texture and set up the filtering.
+                //glBindTexture(GL_TEXTURE_2D, id);
+
+                // Set unpack alignment to one byte
+                glGetIntegerv( GL_UNPACK_ALIGNMENT, &UnpackAlignment );
+                glPixelStorei( GL_UNPACK_ALIGNMENT, 1 );
+
+                GLenum type = GL_RGBA; //GL_ALPHA, GL_LUMINANCE, GL_RGBA
+
+                #if 0 //if buildmipmaps
+
+                GLint ret = gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA, imageWidth, imageHeight,
+//                                                type, GL_UNSIGNED_BYTE, image.data());
+                                                type, GL_UNSIGNED_BYTE, &image[0]);
+
+                #else // else...
+
+                glTexImage2D(GL_TEXTURE_2D, 0 /*LOD*/, GL_RGBA, w, h,
+                                0 /*border*/, GL_RGBA, GL_UNSIGNED_BYTE, data );
+
+                #endif
+
+                // Restore old unpack alignment
+                glPixelStorei( GL_UNPACK_ALIGNMENT, UnpackAlignment );
+
+    stbi_image_free( rgba );
+    return id;
+}
+
+unsigned imguiRenderGLMakeTexture( const char *imagepath ) {
+	FILE *fp = fopen( imagepath, "rb" );
+	if( !fp ) {
+		return 0;
+	}
+	fseek( fp, 0L, SEEK_END );
+	unsigned size = ftell( fp );
+	fseek( fp, 0L, SEEK_SET );
+	unsigned char *data = new unsigned char [size];
+	fread( data, size, 1, fp );
+	fclose( fp );
+	unsigned id = imguiRenderGLMakeTexture( data, size );
+	delete [] data;
+	return id;
 }

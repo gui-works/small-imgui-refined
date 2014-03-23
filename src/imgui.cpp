@@ -342,6 +342,22 @@ static void addGfxCmdArc(float x, float y, float r, float t0, float t1, unsigned
         cmd.arc.w = ROTATORY_RING_WIDTH;
 }
 
+static void addGfxCmdTexture(float x, float y, float w, float h, unsigned id, unsigned int color)
+{
+        if (g_gfxCmdQueueSize >= GFXCMD_QUEUE_SIZE)
+                return;
+        imguiGfxCmd& cmd = g_gfxCmdQueue[g_gfxCmdQueueSize++];
+
+        cmd.type = IMGUI_GFXCMD_TEXTURE;
+        cmd.flags = 0;      // on/off flag.
+        cmd.col = color;
+        cmd.texture.x = (short)x;
+        cmd.texture.y = (short)y;
+        cmd.texture.u = x / w;
+        cmd.texture.v = y / h;
+        cmd.texture.id = id;
+}
+
 static std::map< unsigned, imguiGfxRect > g_rects;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -814,6 +830,34 @@ bool imguiButton(const char* text)
         return res;
 }
 
+bool imguiImage( unsigned texture_id )
+{
+        g_state.widgetId++;
+        unsigned int id = (g_state.areaId<<16) | g_state.widgetId;
+
+        int x = g_state.widgetX;
+        int y = g_state.widgetY - BUTTON_HEIGHT;
+        int w = g_state.widgetW;
+        int h = BUTTON_HEIGHT;
+
+        int offset = w - DEFAULT_SPACING;
+        g_state.widgetX += offset;
+        g_state.widgetW -= offset;
+        g_state.push();
+        g_state.widgetX -= offset;
+        g_state.widgetW += offset;
+        g_state.push();
+        g_state.widgetY -= BUTTON_HEIGHT + DEFAULT_SPACING;
+        g_state.push();
+
+        bool over = inRect(id, x, y, w, h, true) && enabled;
+        bool res = buttonLogic(id, over);
+
+        addGfxCmdTexture((float)x, (float)y, (float)w, (float)h, id, isActive(id) ? gray_alpha(196) : gray_alpha(96) );
+
+        return res;
+}
+
 bool imguiItem(const char* text)
 {
         g_state.widgetId++;
@@ -878,26 +922,32 @@ bool imguiText(const char* text)
 }
 
 bool imguiIcon( unsigned icon ) {
-    return imguiText( ( std::string("\2") + imguiTextConv( icon ) ).c_str() );
+    if( icon >= 0xF000 && icon <= 0xF196 ) {
+        return imguiText( ( std::string("\3") + imguiTextConv( icon ) ).c_str() );
+    } else {
+        return imguiText( ( std::string("\2") + imguiTextConv( icon ) ).c_str() );
+    }
 }
 
 int imguiToolbar( const std::vector<unsigned> &icons ) {
     int res = 0;
 
-    imguiStackPush();
-    imguiStackPush();
+    if( imguiIcon( icons.front() ) ) {
+        res = 1;
+    }
 
-    int pos = imguiStackSet(-1);
+    int pos_ = imguiStackSet(-1);
+    imguiStackSet(pos_);
 
-    for( auto begin = icons.begin(), end = icons.end(), it = begin; it != end; ++it ) {
+    for( auto begin = icons.begin(), end = icons.end(), it = begin + 1; it != end; ++it ) {
         int pos = imguiStackSet(-2);
         if( imguiIcon( *it ) ) {
             res = 1 + it - begin;
         }
+        imguiStackSet(pos);
     }
 
-    imguiStackSet(pos);
-    //imguiStackSet( -3 * icons.size() - 3 );
+    imguiStackSet(pos_);
 
     return res;
 }
@@ -1627,7 +1677,7 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         addGfxCmdRoundedRect((float)x + m0, (float)y, (float)m1 - m0 + SLIDER_MARKER_WIDTH, (float)h, 4.0f, col );
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
 
-#if 1
+#if 0
         m0 += SLIDER_MARKER_WIDTH;
         m1 -= 0;
         std::vector< float > points( 16*2 );

@@ -31,6 +31,7 @@ add_executable(
     src/fonts/Entypo-Social.ttf.cpp
     src/fonts/Entypo.ttf.cpp
     src/fonts/Ubuntu-B.ttf.cpp
+    src/stb_image.c
     deps/glew/src/glew.c
 )
 
