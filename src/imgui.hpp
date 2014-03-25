@@ -58,7 +58,7 @@ void imguiEndFrame();
 
 // masking
 
-bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scroll=0);
+bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scroll=0, bool rounded=true);
 void imguiEndScrollArea();
 
 // layout
@@ -120,6 +120,7 @@ bool imguiDrop( unsigned id );
 bool imguiOver( unsigned id );
 bool imguiHot( unsigned id );
 bool imguiActive( unsigned id );
+bool imguiIsIdle();
 unsigned imguiId();
 
 //bool imguiLink();

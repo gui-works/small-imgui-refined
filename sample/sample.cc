@@ -146,8 +146,7 @@ $GL3(
     sprintf(input, "type here");
 
     // main loop
-    bool running = true;
-    while( running && !glfwWindowShouldClose(window) )
+    while( !glfwWindowShouldClose(window) )
     {
         glfwGetFramebufferSize(window, &width, &height);
         if( width * height <= 1 ) {
@@ -296,7 +295,7 @@ $GL2(
         imguiBeginScrollArea("dialog", 20 + width / 5, 200, width / 5, height - 510, &scrollarea3);
             int answer = 0;
             if( imguiShowDialog("exit app?", &answer) ) {
-                if( answer ) running = false;
+                if( answer ) glfwWindowSetShouldClose( window, true );
             }
         imguiEndScrollArea();
 
@@ -333,7 +332,7 @@ $GL2(
 
         // Check if the ESC key was pressed or the window was closed
         if( glfwGetKey( window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
-            break;
+            glfwWindowSetShouldClose( window, true );
     }
 
     // Clean UI

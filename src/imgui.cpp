@@ -681,7 +681,7 @@ static int g_focusBottom = 0;
 static unsigned int g_scrollId = 0;
 static bool g_insideScrollArea = false;
 
-bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scrollY)
+bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scrollY, bool rounded)
 {
         g_state.areaId++;
         g_state.widgetId = 0;
@@ -706,7 +706,10 @@ bool imguiBeginScrollArea(const char* name, int x, int y, int w, int h, int* scr
         g_insideScrollArea = inRect(g_scrollId, x, y, w, h, false);
         g_state.insideCurrentScrollY = g_insideScrollArea;
 
+        if( rounded )
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 6, black_alpha(192) );
+        else
+        addGfxCmdRect((float)x, (float)y, (float)w, (float)h, black_alpha(192) );
 
         if( name )
         addGfxCmdText(x+AREA_HEADER/2, y+h-AREA_HEADER/2-TEXT_HEIGHT/2, IMGUI_ALIGN_LEFT|IMGUI_ALIGN_BASELINE, name, white_alpha(128) );
@@ -1677,7 +1680,7 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         addGfxCmdRoundedRect((float)x + m0, (float)y, (float)m1 - m0 + SLIDER_MARKER_WIDTH, (float)h, 4.0f, col );
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
 
-#if 0
+#if 1
         m0 += SLIDER_MARKER_WIDTH;
         m1 -= 0;
         std::vector< float > points( 16*2 );
@@ -2274,6 +2277,9 @@ bool imguiHot( unsigned id ) {
 }
 bool imguiActive( unsigned id ) {
     return isActive( id );
+}
+bool imguiIsIdle() {
+    return anyHot() || anyActive() ? false : true;
 }
 
 unsigned imguiId() {
