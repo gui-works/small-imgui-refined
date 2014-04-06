@@ -179,9 +179,7 @@ void imguiTween( unsigned mode ) {
     g_tween = mode % 38;
 }
 
-namespace sand {
-    float tween( int mode, float dt01 );
-}
+float imguiTween_( int mode, float dt, float t = 1.f, bool loop = false );
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -1680,13 +1678,12 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         addGfxCmdRoundedRect((float)x + m0, (float)y, (float)m1 - m0 + SLIDER_MARKER_WIDTH, (float)h, 4.0f, col );
         addGfxCmdRoundedRect((float)x, (float)y, (float)w, (float)h, 4.0f, black_alpha(96) );
 
-#if 1
         m0 += SLIDER_MARKER_WIDTH;
         m1 -= 0;
         std::vector< float > points( 16*2 );
         for( int i = 0, j = 16; i < j; ++i ) {
             float ldt01 = i / float(j-1);
-            float tdt01 = sand::tween( g_tween, ldt01 );
+            float tdt01 = imguiTween_( g_tween, ldt01 );
             float tdt10 = 1 - tdt01;
             float &px = points[i*2+0];
             float &py = points[i*2+1];
@@ -1698,7 +1695,6 @@ bool imguiQuadRange(const char* text, float *val0, float *val1, float vmin, floa
         unsigned lnfg = over ? theme_alpha(256) : theme_alpha(128);
         if( !enabled ) lnfg = gray_alpha(96);
         imguiDrawLines( points, 2, lnfg );
-#endif
 }
 
 // slide #0
@@ -2293,6 +2289,361 @@ imguiGfxRect imguiRect( unsigned id ) {
         return {0,0,0,0,0};
     }
     return found->second;
+}
+
+float imguiTween_( int type, float current, float total, bool looped )
+{
+    const float pi = 3.1415926535897932384626433832795f;
+
+    float t = current, d = total;
+
+    /* small optimization { */
+
+    //if( d <= 0.0f )
+    //    return 1.0f;
+
+    if( d <= 0.f || t <= 0.f )
+    {
+        return( type == IMGUI_TWEEN_COS2PI_11 || type == IMGUI_TWEEN_SINPI2PI_10 ? 1.f : 0.f );
+    }
+
+    if( t >= d )
+    {
+        if( looped )
+        {
+            // todo: optimize me
+            while( t >= d )
+                t -= d;
+        }
+        else
+        {
+            if( type >= IMGUI_TWEEN_SIN2PI_00 )
+                return 0.f;
+
+            return 1.f;
+        }
+    }
+
+    /* } */
+
+    switch(type)
+    {
+    case IMGUI_TWEEN_LINEAR_01:
+        {
+            return t/d;
+        }
+
+    case IMGUI_TWEEN_SIN2PI_00:
+        {
+            float fDelta = t/d;
+            return std::sin(fDelta * 2.0f * pi);
+        }
+
+    case IMGUI_TWEEN_SINPI_00:
+        {
+            float fDelta = t/d;
+            return std::sin(fDelta * pi);
+        }
+
+    case IMGUI_TWEEN_SINPI2PI_10:
+        {
+            float fDelta = t/d;
+            return std::sin((0.5f * pi) * (fDelta + 1));
+        }
+
+    case IMGUI_TWEEN_SIN4PI_00:
+        {
+            float fDelta = t/d;
+            return std::sin(fDelta * 4.0f * pi);
+        }
+
+    case IMGUI_TWEEN_SIN3PI4_00:
+        {
+            float fDelta = t/d;
+            return std::sin(fDelta * 3.0f * pi);
+        }
+
+    case IMGUI_TWEEN_SINPI2_01:
+        {
+            float fDelta = t/d;
+            return std::sin(fDelta * 0.5f * pi);
+        }
+
+    case IMGUI_TWEEN_ACELBREAK_01:
+        {
+            float fDelta = t/d;
+            return (std::sin((fDelta * pi) - (pi * 0.5f)) + 1.0f) * 0.5f;
+        }
+
+    case IMGUI_TWEEN_COS2PI_11:
+        {
+            float fDelta = t/d;
+            return std::cos(fDelta * 2.0f * pi);
+        }
+
+    case IMGUI_TWEEN_BACKIN_01:
+        {
+            float s = 1.70158f;
+            float postFix = t/=d;
+            return postFix * t * ((s + 1) * t - s);
+        }
+
+    case IMGUI_TWEEN_BACKOUT_01:
+        {
+            float s = 1.70158f;
+            return 1.f * ((t = t/d-1)*t*((s+1)*t + s) + 1);
+        }
+
+    case IMGUI_TWEEN_BACKINOUT_01:
+        {
+            float s = 1.70158f;
+            if ((t/=d/2) < 1)
+                return 1.f/2*(t*t*(((s*=(1.525f))+1)*t - s));
+
+            float postFix = t-=2;
+            return 1.f/2*((postFix)*t*(((s*=(1.525f))+1)*t + s) + 2);
+        }
+
+#       define BOUNCE(v) \
+        if ((t/=d) < (1/2.75f)) \
+            { \
+            v = 1.f*(7.5625f*t*t); \
+            } \
+        else if (t < (2/2.75f)) \
+            { \
+            float postFix = t-=(1.5f/2.75f); \
+            \
+            v = 1.f*(7.5625f*(postFix)*t + .75f); \
+            } \
+        else if (t < (2.5/2.75)) \
+            { \
+            float postFix = t-=(2.25f/2.75f); \
+            \
+            v = 1.f*(7.5625f*(postFix)*t + .9375f); \
+            } \
+        else \
+            { \
+            float postFix = t-=(2.625f/2.75f); \
+            \
+            v = 1.f*(7.5625f*(postFix)*t + .984375f); \
+            }
+
+    case IMGUI_TWEEN_BOUNCEIN_01:
+        {
+            float v;
+            t = d-t;
+            BOUNCE(v);
+            return 1.f - v;
+        }
+
+    case IMGUI_TWEEN_BOUNCEOUT_01:
+        {
+            float v;
+            BOUNCE(v);
+            return v;
+        }
+
+    case IMGUI_TWEEN_BOUNCEINOUT_01:
+        {
+            float v;
+            if (t < d/2) {
+                t = t*2;
+                t = d-t;
+                BOUNCE(v);
+                return (1.f - v) * .5f;
+            } else {
+                t = t*2 -d;
+                BOUNCE(v);
+                return v * .5f + 1.f*.5f;
+            }
+        }
+
+#       undef BOUNCE
+
+    case IMGUI_TWEEN_CIRCIN_01:
+        t /= d;
+        return 1.f - std::sqrt(1 - t*t);
+
+    case IMGUI_TWEEN_CIRCOUT_01:
+        t /= d;
+        t--;
+        return std::sqrt(1 - t*t);
+
+    case IMGUI_TWEEN_CIRCINOUT_01:
+        t /= d/2;
+        if(t < 1)
+            return -1.f/2 * (std::sqrt(1 - t*t) - 1);
+
+        t-=2;
+        return 1.f/2 * (std::sqrt(1 - t*t) + 1);
+
+
+    case IMGUI_TWEEN_ELASTICIN_01:
+        {
+            t/=d;
+
+            float p=d*.3f;
+            float a=1.f;
+            float s=p/4;
+            float postFix =a*std::pow(2,10*(t-=1)); // this is a fix, again, with post-increment operators
+
+            return -(postFix * std::sin((t*d-s)*(2*pi)/p ));
+        }
+
+    case IMGUI_TWEEN_ELASTICOUT_01:
+        {
+            float p=d*.3f;
+            float a=1.f;
+            float s=p/4;
+
+            return (a*std::pow(2,-10*t) * std::sin( (t*d-s)*(2*pi)/p ) + 1.f);
+        }
+
+    case IMGUI_TWEEN_ELASTICINOUT_01:
+        {
+            t/=d/2;
+
+            float p=d*(.3f*1.5f);
+            float a=1.f;
+            float s=p/4;
+
+            if (t < 1) {
+                float postFix =a*std::pow(2,10*(t-=1)); // postIncrement is evil
+                return -.5f*(postFix* std::sin( (t*d-s)*(2*pi)/p ));
+            }
+
+            float postFix =  a*std::pow(2,-10*(t-=1)); // postIncrement is evil
+            return postFix * std::sin( (t*d-s)*(2*pi)/p )*.5f + 1.f;
+        }
+
+    case IMGUI_TWEEN_EXPOIN_01:
+        return std::pow(2, 10 * (t/d - 1));
+
+    case IMGUI_TWEEN_EXPOOUT_01:
+        return 1.f - ( t == d ? 0 : std::pow(2, -10.f * (t/d)));
+
+    case IMGUI_TWEEN_EXPOINOUT_01:
+        t /= d/2;
+        if (t < 1)
+            return 1.f/2 * std::pow(2, 10 * (t - 1));
+
+        t--;
+        return 1.f/2 * (-std::pow(2, -10 * t) + 2);
+
+    case IMGUI_TWEEN_QUADIN_01:
+        t /= d;
+        return t*t;
+
+    case IMGUI_TWEEN_QUADOUT_01:
+        t /= d;
+        return (2.f - t) * t;
+
+    case IMGUI_TWEEN_QUADINOUT_01:
+        t /= d/2;
+        if(t < 1)
+            return (1.f/2*t*t);
+
+        t--;
+        return -1.f/2 * (t*(t-2) - 1);
+
+    case IMGUI_TWEEN_CUBICIN_01:
+        t /= d;
+        return t*t*t;
+
+    case IMGUI_TWEEN_CUBICOUT_01:
+        t /= d;
+        t--;
+        return (1.f + t*t*t);
+
+    case IMGUI_TWEEN_CUBICINOUT_01:
+        t /= d/2;
+        if (t < 1)
+            return 1.f/2*t*t*t;
+
+        t -= 2;
+        return 1.f/2*(t*t*t + 2);
+
+    case IMGUI_TWEEN_QUARTIN_01:
+        t /= d;
+        return t*t*t*t;
+
+    case IMGUI_TWEEN_QUARTOUT_01:
+        t /= d;
+        t--;
+        return (1.f - t*t*t*t);
+
+    case IMGUI_TWEEN_QUARTINOUT_01:
+        t /= d/2;
+        if(t < 1)
+            return 1.f/2*t*t*t*t;
+
+        t -= 2;
+        return -1.f/2 * (t*t*t*t - 2);
+
+    case IMGUI_TWEEN_QUINTIN_01:
+        t /= d;
+        return t*t*t*t*t;
+
+    case IMGUI_TWEEN_QUINTOUT_01:
+        t /= d;
+        t--;
+        return (1.f + t*t*t*t*t);
+
+    case IMGUI_TWEEN_QUINTINOUT_01:
+        t /= d/2;
+        if(t < 1)
+            return 1.f/2*t*t*t*t*t;
+
+        t -= 2;
+        return 1.f/2*(t*t*t*t*t + 2);
+
+    case IMGUI_TWEEN_SINEIN_01:
+        return 1.f - std::cos(t/d * (pi/2));
+
+    case IMGUI_TWEEN_SINEOUT_01:
+        return std::sin(t/d * (pi/2));
+
+    case IMGUI_TWEEN_SINEINOUT_01:
+        return -1.f/2 * (std::cos(pi*t/d) - 1);
+
+
+    case IMGUI_TWEEN_SINESQUARE:
+        {
+            float A = std::sin(0.5f*(t/d)*pi);
+            return A*A;
+        }
+
+    case IMGUI_TWEEN_EXPONENTIAL:
+        {
+            return 1/(1+std::exp(6-12*(t/d)));
+        }
+
+    case IMGUI_TWEEN_SCHUBRING1:
+        {
+            t /= d;
+            return 2*(t+(0.5f-t)*std::abs(0.5f-t))-0.5f;
+        }
+
+    case IMGUI_TWEEN_SCHUBRING2:
+        {
+            t /= d;
+            float p1pass= 2*(t+(0.5f-t)*std::abs(0.5f-t))-0.5f;
+            float p2pass= 2*(p1pass+(0.5f-p1pass)*std::abs(0.5f-p1pass))-0.5f;
+            return p2pass;
+        }
+
+    case IMGUI_TWEEN_SCHUBRING3:
+        {
+            t /= d;
+            float p1pass= 2*(t+(0.5f-t)*std::abs(0.5f-t))-0.5f;
+            float p2pass= 2*(p1pass+(0.5f-p1pass)*std::abs(0.5f-p1pass))-0.5f;
+            float pAvg=(p1pass+p2pass)/2;
+            return pAvg;
+        }
+
+    default:
+        return 0;
+    }
 }
 
 #ifdef _MSC_VER
