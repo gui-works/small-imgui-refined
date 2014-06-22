@@ -206,7 +206,9 @@ int fons__tt_getGlyphKernAdvance(struct FONSttFontImpl *font, int glyph1, int gl
 
 #else
 
+#ifndef IMGUI_BYPASS_STB_TRUETYPE_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
+#endif
 static void* fons__tmpalloc(size_t size, void* up);
 static void fons__tmpfree(void* ptr, void* up);
 #define STBTT_malloc(x,u)    fons__tmpalloc(x,u)

@@ -15,6 +15,26 @@
 #include "fonts/entypo.ttf.hpp"
 #include <GLFW/glfw3.h>
 
+#ifdef _WIN32
+#include <windows.h>
+void set_cursor( LPCTSTR B = 0 ) {
+    auto ptr = B ? LoadCursor( NULL, B ) : nullptr;
+#if !defined(__MINGW64__) && _MSC_VER <= 1200
+    SetCursor( ptr );
+    SetClassLong( 0, GCL_HCURSOR, ( LONG )ptr );
+#else
+    SetCursor( ptr );
+    SetClassLongPtr( 0, GCLP_HCURSOR, ( LONG )( LONG_PTR )ptr );
+#endif
+}
+#endif
+
+#ifdef _WIN32
+#define $windows(...) __VA_ARGS__
+#else
+#define $windows(...)
+#endif
+
 unsigned int KeyUNICODE=0;
 
 void GetUNICODE(GLFWwindow *window, unsigned int unicode ){
@@ -295,7 +315,9 @@ $GL2(
         imguiBeginScrollArea("dialog", 20 + width / 5, 200, width / 5, height - 510, &scrollarea3);
             int answer = 0;
             if( imguiShowDialog("exit app?", &answer) ) {
-                if( answer ) glfwWindowSetShouldClose( window, true );
+                if( answer ) {
+                    glfwSetWindowShouldClose( window, true );
+                }
             }
         imguiEndScrollArea();
 
@@ -326,13 +348,20 @@ $GL2(
             fprintf(stderr, "OpenGL Error : %d %x\n", err, err );
         }
 
+        // Update cursor
+        $windows({
+            int cursor = imguiGetMouseCursor();
+            set_cursor( cursor == IMGUI_MOUSE_ICON_HAND ? IDC_HAND : IDC_ARROW );
+        })
+
         // Swap buffers
         glfwSwapBuffers(window);
         glfwPollEvents();
 
         // Check if the ESC key was pressed or the window was closed
-        if( glfwGetKey( window, GLFW_KEY_ESCAPE ) == GLFW_PRESS )
-            glfwWindowSetShouldClose( window, true );
+        if( glfwGetKey( window, GLFW_KEY_ESCAPE ) == GLFW_PRESS ) {
+            glfwSetWindowShouldClose( window, true );
+        }
     }
 
     // Clean UI

@@ -35,13 +35,16 @@ static const float PI = 3.14159265f;
 void imguifree(void* ptr, void* userptr);
 void* imguimalloc(size_t size, void* userptr);
 
+#ifndef IMGUI_BYPASS_FONTSTASH_IMPLEMENTATION
+#define FONTSTASH_IMPLEMENTATION    // Expands implementation
+#define GLFONTSTASH_IMPLEMENTATION  // Expands implementation
+#endif
+
 #if 1
 #include <stdio.h>                  // malloc, free, fopen, fclose, ftell, fseek, fread
 #include <string.h>                 // memset
-#define FONTSTASH_IMPLEMENTATION    // Expands implementation
 #include "fontstash.h"
 //#include <GLFW/glfw3.h>             // Or any other GL header of your choice.
-#define GLFONTSTASH_IMPLEMENTATION  // Expands implementation
 #include "fontstashGL.h"
 // Create GL stash for 512x512 texture, our coordinate system has zero at top-left.
 struct FONScontext* fs;
