@@ -3,6 +3,9 @@ imgui
 
 Imported from: https://github.com/r-lyeh-archived/imgui
 
+In case the linked fortfont repository didn't work then use this imported repository:
+https://github.com/gui-works/fortfont
+
 Features
 --------
 
